@@ -120,6 +120,30 @@ export default merge(baseConfig, {
       },
       // SASS support - compile all other .scss files and pipe it to style.css
       {
+        test: /\*.s?css$/,
+        use: [
+          {
+            loader: 'style-loader',
+          },
+          {
+            loader: '@teamsupercell/typings-for-css-modules-loader',
+          },
+          {
+            loader: 'css-loader',
+            options: {
+              modules: {
+                localIdentName: '[name]__[local]__[hash:base64:5]',
+              },
+              sourceMap: true,
+              importLoaders: 1,
+            },
+          },
+          {
+            loader: 'sass-loader',
+          },
+        ],
+      },
+      {
         test: /^((?!\.global).)*\.(scss|sass)$/,
         use: [
           {

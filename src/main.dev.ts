@@ -11,7 +11,7 @@
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 import path from 'path';
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, nativeTheme, shell } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
@@ -69,12 +69,13 @@ const createWindow = async () => {
 
   mainWindow = new BrowserWindow({
     show: false,
-    width: 1024,
-    height: 728,
+    width: 375,
+    height: 668,
     icon: getAssetPath('icon.png'),
     webPreferences: {
       nodeIntegration: true,
     },
+    titleBarStyle: 'hiddenInset',
   });
 
   mainWindow.loadURL(`file://${__dirname}/index.html`);
@@ -99,12 +100,16 @@ const createWindow = async () => {
 
   const menuBuilder = new MenuBuilder(mainWindow);
   menuBuilder.buildMenu();
-
   // Open urls in the user's browser
   mainWindow.webContents.on('new-window', (event, url) => {
     event.preventDefault();
     shell.openExternal(url);
   });
+
+  console.log(nativeTheme.shouldUseDarkColors, 'sdkjfhksdhfkjhsdk');
+
+  mainWindow.setVibrancy('light');
+  // mainWindow.setResizable(false)
 
   // Remove this if your app does not use auto updates
   // eslint-disable-next-line
