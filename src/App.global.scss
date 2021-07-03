@@ -1,0 +1,111 @@
+/*
+ * @NOTE: Prepend a `~` to css file paths that are in your node_modules
+ *        See https://github.com/webpack-contrib/sass-loader#imports
+ */
+body {
+  position: relative;
+  color: #333;
+  padding: 0px;
+  margin: 0;
+  height: 100vh;
+  background-color: #fff;
+  /* background: linear-gradient(
+    200.96deg,
+    #fedc2a -29.09%,
+    #dd5789 51.77%,
+    #7a2c9e 129.35%
+  ); */
+  font-family: sans-serif;
+  overflow: hidden;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+// button {
+//   background-color: white;
+//   padding: 10px 20px;
+//   border-radius: 10px;
+//   border: none;
+//   appearance: none;
+//   font-size: 1.3rem;
+//   box-shadow: 0px 8px 28px -6px rgba(24, 39, 75, 0.12),
+//     0px 18px 88px -4px rgba(24, 39, 75, 0.14);
+//   transition: transform ease-in 0.1s;
+//   cursor: pointer;
+// }
+
+li {
+  list-style: none;
+}
+
+a:hover {
+  opacity: 1;
+  text-decoration: none;
+}
+
+a:not([href]):not([tabindex]) {
+  color: inherit;
+}
+
+a {
+  text-decoration: none;
+  height: fit-content;
+  width: fit-content;
+  &:hover,
+  &:active {
+    text-decoration: none;
+  }
+}
+
+img {
+  max-width: 100%;
+  border: 0;
+}
+
+label {
+  display: block;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: normal;
+}
+
+ul,
+ol,
+li {
+  list-style-type: none;
+}
+
+i,
+em {
+  font-style: normal;
+}
+
+select {
+  appearance: none;
+}
+
+[role='button'] {
+  cursor: pointer;
+}
+
+input,
+textarea {
+  appearance: none;
+  outline: none;
+
+  &::-webkit-input-placeholder,
+  &:-moz-placeholder,
+  &::-moz-placeholder,
+  &:-ms-input-placeholder {
+    color: #999;
+  }
+}

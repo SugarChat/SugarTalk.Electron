@@ -54,7 +54,7 @@ export default class MenuBuilder {
 
   buildDarwinTemplate(): MenuItemConstructorOptions[] {
     const subMenuAbout: DarwinMenuItemConstructorOptions = {
-      label: 'Electron',
+      label: 'SugarTalk',
       submenu: [
         {
           label: 'About ElectronReact',
