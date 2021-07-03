@@ -4,9 +4,14 @@ import { Settings } from '@material-ui/icons';
 import { Header } from '../../components/header';
 import logo from './images/logo.jpg';
 import { Avatar, Button } from '@material-ui/core';
+import { RouteComponentProps } from 'react-router-dom';
 
 const images = require('../../../assets/icon.png');
-export const Login = () => {
+export const Login = ({ history }: RouteComponentProps) => {
+  const onLoginClick = () => {
+    history.push('/meeting-list');
+  };
+
   return (
     <div className={styles.root}>
       <Header></Header>
@@ -21,6 +26,7 @@ export const Login = () => {
           variant="contained"
           color="primary"
           disableElevation
+          onClick={onLoginClick}
         >
           加入会议
         </Button>
