@@ -1,0 +1,9 @@
+{
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "files.associations": {
+    "*.ts": "typescriptreact"
+  },
+  "editor.formatOnSave": true
+}
