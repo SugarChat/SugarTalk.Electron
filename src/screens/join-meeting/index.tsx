@@ -7,6 +7,9 @@ import {
 import React, { useState } from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 import { Header } from '../../components/header';
+import { MeetingDto } from '../../dtos/ScheduleMeetingCommand';
+import { SugarTalkResponse } from '../../dtos/SugarTalkResponse';
+import { api } from '../../services/api/api';
 import styles from './index.scss';
 
 export interface MeetingInfo {
