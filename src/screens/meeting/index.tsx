@@ -1,12 +1,15 @@
 import React from 'react';
-import styles from './index.scss';
 import { RouteComponentProps } from 'react-router-dom';
-import { Button } from '@material-ui/core';
+import { Box } from '@material-ui/core';
+import styles from './index.scss';
+import StatusBar from './components/status-bar';
+import FooterToolbar from './components/footer-toolbar';
 
 export const Meeting = ({ history }: RouteComponentProps) => {
   return (
-    <div className={styles.root}>
-      <Button onClick={() => history.goBack()}>Back</Button>
-    </div>
+    <Box className={styles.root}>
+      <StatusBar duration="02:45:20" />
+      <FooterToolbar />
+    </Box>
   );
 };
