@@ -6,6 +6,10 @@ import { Settings } from '@material-ui/icons';
 import { Button } from '@material-ui/core';
 
 export const MeetingList = ({ history }: RouteComponentProps) => {
+  const joinMeeting = () => {
+    history.push('/join');
+  };
+
   return (
     <div className={styles.root}>
       <Header></Header>
@@ -14,6 +18,7 @@ export const MeetingList = ({ history }: RouteComponentProps) => {
       </div>
       <div className={styles.content}>
         <Button onClick={() => history.goBack()}>Back</Button>
+        <Button onClick={joinMeeting}>加入会议</Button>
       </div>
     </div>
   );

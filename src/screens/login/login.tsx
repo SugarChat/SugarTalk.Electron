@@ -14,7 +14,7 @@ export const Login = ({ history }: RouteComponentProps) => {
 
   return (
     <div className={styles.root}>
-      <Header></Header>
+      <Header title="腾讯会议"></Header>
       <div className={styles.settingWrapper}>
         <Settings style={{ color: '#333', width: '25px', height: '25px' }} />
       </div>
