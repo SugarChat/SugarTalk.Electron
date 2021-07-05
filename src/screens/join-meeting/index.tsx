@@ -7,10 +7,7 @@ import {
 import React, { useState } from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 import { Header } from '../../components/header';
-import { MeetingDto } from '../../dtos/ScheduleMeetingCommand';
-import { SugarTalkResponse } from '../../dtos/SugarTalkResponse';
-import { api } from '../../services/api/api';
-import styles from './index.scss';
+import * as styles from './styles';
 
 export interface MeetingInfo {
   meetingId: string;
@@ -67,10 +64,10 @@ export const JoinMeeting = ({ history }: RouteComponentProps) => {
   };
 
   return (
-    <div className={styles.root}>
+    <div style={styles.root}>
       <Header title="加入会议"></Header>
-      <form className={styles.content} noValidate autoComplete="off">
-        <div className={styles.contentItem}>
+      <form style={styles.content} noValidate autoComplete="off">
+        <div style={styles.contentItem}>
           <TextField
             id="outlined-basic"
             label="会议号"
@@ -81,7 +78,7 @@ export const JoinMeeting = ({ history }: RouteComponentProps) => {
             onChange={(e) => onMeetingIdChanged(e.target.value)}
           />
         </div>
-        <div className={styles.contentItem}>
+        <div style={styles.contentItem}>
           <TextField
             id="outlined-basic2"
             label="你的名称"
@@ -92,7 +89,7 @@ export const JoinMeeting = ({ history }: RouteComponentProps) => {
             onChange={(e) => onUserNameChanged(e.target.value)}
           />
         </div>
-        <div className={styles.contentItem}>
+        <div style={styles.contentItem}>
           <FormControlLabel
             control={
               <Checkbox
@@ -105,7 +102,7 @@ export const JoinMeeting = ({ history }: RouteComponentProps) => {
             label="自动连接音频"
           />
         </div>
-        <div className={styles.contentItem}>
+        <div style={styles.contentItem}>
           <FormControlLabel
             control={
               <Checkbox
@@ -118,7 +115,7 @@ export const JoinMeeting = ({ history }: RouteComponentProps) => {
             label="入会开启摄像头"
           />
         </div>
-        <div className={styles.joinButtonWrapper}>
+        <div style={styles.joinButtonWrapper}>
           <Button
             style={{ width: '100%', height: '40px' }}
             variant="contained"
