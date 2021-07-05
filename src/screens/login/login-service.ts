@@ -2,9 +2,6 @@ import { OAuth2Client } from 'google-auth-library';
 import http from 'http';
 import url from 'url';
 import * as electron from 'electron';
-// const http = require('http');
-// const url = require('url');
-// const destroyer = require('server-destroy');
 
 export const getAuthenticatedClient = (): Promise<OAuth2Client> => {
   return new Promise((resolve, reject) => {
