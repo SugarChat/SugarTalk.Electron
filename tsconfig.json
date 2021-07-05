@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2018",
+    "target": "esnext",
     "module": "CommonJS",
     "lib": ["dom", "esnext"],
     "declaration": true,

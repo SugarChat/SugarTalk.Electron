@@ -3,6 +3,10 @@ module.exports = {
   rules: {
     // A temporary hack related to IDE not resolving correct package.json
     'import/no-extraneous-dependencies': 'off',
+    'import/prefer-default-export': 'off', // 禁止 export 必须单行
+    'promise/always-return': 'off', // 禁止 async await 必须retuan 值
+    'jsx-a11y/no-static-element-interactions': 'off', // 禁止div元素 必须添加role, onClick不报错 例如: role=button
+    'jsx-a11y/click-events-have-key-events': 'off', // 禁止不能单独使用onClick, 要使用onMouseDown
   },
   parserOptions: {
     ecmaVersion: 2020,

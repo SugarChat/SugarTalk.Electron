@@ -1,65 +1,61 @@
 import React from 'react';
-import styles from './index.scss';
 import { Settings } from '@material-ui/icons';
-import { Header } from '../../components/header';
-import logo from './images/logo.jpg';
 import { Avatar, Button } from '@material-ui/core';
 import { RouteComponentProps } from 'react-router-dom';
+import { Header } from '../../components/header';
+import logo from './images/logo.jpg';
+import * as styles from './styles';
+import { useLoginLogic } from './hook';
 
-const images = require('../../../assets/icon.png');
 export const Login = ({ history }: RouteComponentProps) => {
+  const { onLogin } = useLoginLogic();
+
   const onLoginClick = () => {
     history.push('/meeting-list');
   };
 
   return (
-    <div className={styles.root}>
-      <Header></Header>
-      <div className={styles.settingWrapper}>
-        <Settings style={{ color: '#333', width: '25px', height: '25px' }} />
+    <div style={styles.root}>
+      <Header />
+      <div style={styles.settingWrapper}>
+        <Settings style={styles.settings} />
       </div>
-      <div className={styles.content}>
+      <div style={styles.content}>
         <img src={logo} alt="" />
 
         <Button
-          style={{ width: '100%', height: '40px' }}
+          style={styles.joinMeeting}
           variant="contained"
           color="primary"
           disableElevation
-          onClick={onLoginClick}
+          onClick={() => {
+            onLoginClick();
+          }}
         >
           加入会议
         </Button>
 
-        <Button
-          style={{
-            color: '#2196F3',
-            marginTop: '20px',
-            width: '100%',
-            height: '40px',
-          }}
-          variant="outlined"
-        >
+        <Button style={styles.login} variant="outlined">
           注册/登录
         </Button>
 
-        <div className={styles.otherLogin}>
-          <div className={styles.text}>其他登录方式</div>
-          <div className={styles.line}></div>
+        <div style={styles.otherLogin}>
+          <div style={styles.otherLoginText}>其他登录方式</div>
+          <div style={styles.line} />
         </div>
 
-        <div className={styles.otherLoginButtonsWrapper}>
-          <div className={styles.buttonWrapper}>
-            <Avatar src={images} style={{ width: '40px', height: '40px' }} />
-            <div className={styles.buttonText}>Wechat</div>
+        <div style={styles.otherLoginButtonsWrapper}>
+          <div style={styles.buttonWrapper} onClick={() => onLogin('wechat')}>
+            <Avatar src="../assets/login/wechat.png" style={styles.images} />
+            <div style={styles.buttonText}>Wechat</div>
           </div>
-          <div className={styles.buttonWrapper}>
-            <Avatar src={images} style={{ width: '40px', height: '40px' }} />
-            <div className={styles.buttonText}>Google</div>
+          <div style={styles.buttonWrapper} onClick={() => onLogin('google')}>
+            <Avatar src="../assets/login/google.png" style={styles.images} />
+            <div style={styles.buttonText}>Google</div>
           </div>
-          <div className={styles.buttonWrapper}>
-            <Avatar src={images} style={{ width: '40px', height: '40px' }} />
-            <div className={styles.buttonText}>Facebook</div>
+          <div style={styles.buttonWrapper} onClick={() => onLogin('facebook')}>
+            <Avatar src="../assets/login/facebook.png" style={styles.images} />
+            <div style={styles.buttonText}>Facebook</div>
           </div>
         </div>
       </div>
