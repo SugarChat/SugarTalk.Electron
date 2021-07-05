@@ -1,5 +1,5 @@
 // import * as electron from 'electron';
-import { getAuthenticatedClient } from './login-server';
+import { getAuthenticatedClient } from './login-service';
 
 export type LoginType = 'google' | 'facebook' | 'wechat';
 
