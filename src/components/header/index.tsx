@@ -4,7 +4,7 @@ import styles from './index.scss';
 export interface HeaderProps {
   leftComponent?: React.ReactNode;
   rightComponent?: React.ReactNode;
-  title: string;
+  title?: string;
 }
 
 export const Header: FunctionComponent<HeaderProps> = ({

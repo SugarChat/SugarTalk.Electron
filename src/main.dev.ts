@@ -11,7 +11,7 @@
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 import path from 'path';
-import { app, BrowserWindow, nativeTheme, shell } from 'electron';
+import { app, BrowserWindow, nativeTheme, shell, protocol } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
@@ -74,6 +74,7 @@ const createWindow = async () => {
     icon: getAssetPath('icon.png'),
     webPreferences: {
       nodeIntegration: true,
+      enableRemoteModule: true,
     },
     titleBarStyle: 'hiddenInset',
   });
@@ -106,9 +107,10 @@ const createWindow = async () => {
     shell.openExternal(url);
   });
 
-  console.log(nativeTheme.shouldUseDarkColors, 'sdkjfhksdhfkjhsdk');
-
   mainWindow.setVibrancy('light');
+
+  mainWindow.webContents.userAgent =
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0';
   // mainWindow.setResizable(false)
 
   // Remove this if your app does not use auto updates
@@ -119,7 +121,6 @@ const createWindow = async () => {
 /**
  * Add event listeners...
  */
-
 app.on('window-all-closed', () => {
   // Respect the OSX convention of having the application in memory even
   // after all windows have been closed
@@ -128,7 +129,17 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.whenReady().then(createWindow).catch(console.log);
+app
+  .whenReady()
+  .then(() => {
+    protocol.registerFileProtocol('sugartalk', (request, callback) => {
+      // parse authorization code from request
+      console.log(request);
+    });
+
+    return createWindow();
+  })
+  .catch(console.log);
 
 app.on('activate', () => {
   // On macOS it's common to re-create a window in the app when the
