@@ -3,5 +3,24 @@
   flex-direction: column;
   align-items: flex-start;
   height: 100%;
-  padding: 0px 24px;
+  padding: 30px 10px 30px 10px;
+
+  .content {
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+
+    .contentItem {
+      flex: 1;
+      flex-direction: column;
+      align-items: flex-start;
+      height: 100%;
+      padding: 10px;
+    }
+    .joinButtonWrapper {
+      width: 95%;
+      position: absolute;
+      bottom: 5%;
+    }
+  }
 }
