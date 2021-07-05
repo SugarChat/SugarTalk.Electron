@@ -75,7 +75,6 @@ const createWindow = async () => {
     webPreferences: {
       nodeIntegration: true,
       enableRemoteModule: true,
-      contextIsolation: true,
     },
     titleBarStyle: 'hiddenInset',
   });
