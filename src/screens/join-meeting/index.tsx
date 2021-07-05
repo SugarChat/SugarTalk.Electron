@@ -63,6 +63,43 @@ export const JoinMeeting = ({ history }: RouteComponentProps) => {
     setMeetingInfo(thisMeetingInfo);
   };
 
+  const startCapturing = () => {
+    const { desktopCapturer } = require('electron');
+
+    desktopCapturer
+      .getSources({ types: ['window', 'screen'] })
+      .then(async (sources: any) => {
+        for (const source of sources) {
+          console.log(source);
+          if (source.name === 'Screen 2') {
+            try {
+              const stream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: false,
+              });
+              handleStream(stream);
+            } catch (e) {
+              handleError(e);
+            }
+            return;
+          }
+        }
+      });
+  };
+
+  const handleStream = (stream: MediaProvider | null) => {
+    console.log('-----video-----');
+    const video = document.querySelector('video');
+    if (video) {
+      video.srcObject = stream;
+      video.onloadedmetadata = (e) => video.play();
+    }
+  };
+
+  const handleError = (e) => {
+    console.log(e);
+  };
+
   return (
     <div style={styles.root}>
       <Header title="加入会议"></Header>
@@ -133,6 +170,15 @@ export const JoinMeeting = ({ history }: RouteComponentProps) => {
             onClick={onBackClick}
           >
             返回
+          </Button>
+          <Button
+            style={{ width: '100%', height: '40px', marginTop: '10px' }}
+            variant="contained"
+            color="primary"
+            disableElevation
+            onClick={startCapturing}
+          >
+            分享屏幕
           </Button>
         </div>
       </form>

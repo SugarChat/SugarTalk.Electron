@@ -16,7 +16,7 @@ export const Login = ({ history }: RouteComponentProps) => {
 
   return (
     <div style={styles.root}>
-      <Header />
+      <Header title="登录" />
       <div style={styles.settingWrapper}>
         <Settings style={styles.settings} />
       </div>
