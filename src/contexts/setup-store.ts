@@ -1,4 +1,4 @@
-export type IActionType = 'UpdateIdToken' | 'UpdateUserInfo' | 'UpdateMettings';
+export type IActionType = 'UpdateIdToken' | 'UpdateUserInfo' | 'UpdateMeetings';
 
 export interface IRootStoreAction {
   type: IActionType;
