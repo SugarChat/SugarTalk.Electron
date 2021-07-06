@@ -17,11 +17,6 @@ export interface MeetingInfo {
 }
 
 export const JoinMeeting = ({ history }: RouteComponentProps) => {
-  const onJoinClick = () => {};
-  const onBackClick = () => {
-    history.goBack();
-  };
-
   const defaultMeetingInfo: MeetingInfo = {
     meetingId: '',
     userName: '',
@@ -30,6 +25,13 @@ export const JoinMeeting = ({ history }: RouteComponentProps) => {
   };
 
   const [meetingInfo, setMeetingInfo] = useState(defaultMeetingInfo);
+
+  const onJoinClick = () => {
+    history.push('/meeting', meetingInfo);
+  };
+  const onBackClick = () => {
+    history.goBack();
+  };
 
   const onMeetingIdChanged = (meetingId: string) => {
     const thisMeetingInfo = {

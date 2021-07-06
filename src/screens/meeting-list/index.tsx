@@ -6,9 +6,11 @@ import { scheduleMeeting } from '../../services/api/meetingApi';
 import styles from './index.scss';
 import { Header } from '../../components/header';
 
-export const MeetingList = ({ history }: RouteComponentProps) => {
+export const MeetingList = (params: RouteComponentProps) => {
+  console.log(params.location.state);
+
   const joinMeeting = () => {
-    history.push('/join');
+    params.history.push('/join');
   };
 
   const onScheduleMeetingClicked = async () => {
