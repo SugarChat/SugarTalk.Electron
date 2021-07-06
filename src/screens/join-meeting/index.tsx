@@ -134,15 +134,6 @@ export const JoinMeeting = ({ history }: RouteComponentProps) => {
           >
             返回
           </Button>
-          <Button
-            style={{ width: '100%', height: '40px', marginTop: '10px' }}
-            variant="contained"
-            color="primary"
-            disableElevation
-            onClick={startCapturing}
-          >
-            分享屏幕
-          </Button>
         </div>
       </form>
     </div>
