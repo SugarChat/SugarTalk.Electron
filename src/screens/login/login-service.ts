@@ -53,7 +53,9 @@ export const getAuthenticatedClient = (): Promise<OAuth2Client> => {
         authWindow.webContents.on(
           'did-redirect-navigation',
           (event, newUrl) => {
-            authWindow.close();
+            setTimeout(() => {
+              authWindow.close();
+            }, 300);
           }
         );
         // open the browser to the authorize url to start the workflow

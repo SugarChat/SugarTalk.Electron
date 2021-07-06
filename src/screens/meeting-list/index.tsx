@@ -1,18 +1,20 @@
 import React from 'react';
-import { RouteComponentProps } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 import { Settings } from '@material-ui/icons';
 import { Button } from '@material-ui/core';
-import { scheduleMeeting } from '../../services/api/meetingApi';
+import Api from '../../services/api';
 import styles from './index.scss';
 import { Header } from '../../components/header';
 
-export const MeetingList = ({ history }: RouteComponentProps) => {
+export const MeetingList = () => {
+  const history = useHistory();
+
   const joinMeeting = () => {
     history.push('/join');
   };
 
   const onScheduleMeetingClicked = async () => {
-    const meetingInfo = await scheduleMeeting();
+    const meetingInfo = await Api.meeting.scheduleMeeting((e) => {});
     console.log(meetingInfo);
   };
 
