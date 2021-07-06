@@ -2,7 +2,7 @@ import React, { FunctionComponent, useMemo } from 'react';
 import { Route, Redirect, useLocation, useHistory } from 'react-router-dom';
 import { IRoute } from '../../screens/index';
 import { Login } from '../../screens/login/index';
-import { useStores } from '../../contexts/index';
+import { useStores } from '../../contexts/root-context';
 
 export interface IAuthRouterProps {
   routers: IRoute[];

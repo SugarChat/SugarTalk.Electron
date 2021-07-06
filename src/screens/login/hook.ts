@@ -1,6 +1,6 @@
 // import * as electron from 'electron';
 import { getAuthenticatedClient } from './login-service';
-import { useStores } from '../../contexts/index';
+import { useStores } from '../../contexts/root-context';
 
 export type LoginType = 'google' | 'facebook' | 'wechat';
 

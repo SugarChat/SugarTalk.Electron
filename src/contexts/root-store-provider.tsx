@@ -1,7 +1,7 @@
 import React, { useReducer, FunctionComponent } from 'react';
 import { clone } from 'ramda';
 import { IRootStore, IRootStoreAction, BaseStoreInstance } from './setup-store';
-import { RootStoreContextProvider } from './index';
+import { RootStoreContextProvider } from './root-context';
 
 export const RootStoreProvider: FunctionComponent = ({ children }) => {
   const [state, dispatch] = useReducer(
