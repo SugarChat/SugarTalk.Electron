@@ -250,6 +250,7 @@
   "dependencies": {
     "@material-ui/core": "^4.11.4",
     "@material-ui/icons": "^4.11.2",
+    "@types/ramda": "^0.27.42",
     "axios": "^0.21.1",
     "custom-electron-titlebar": "^3.2.7",
     "electron-debug": "^3.1.0",
@@ -258,6 +259,7 @@
     "google-auth-library": "^7.2.0",
     "history": "^5.0.0",
     "qs": "^6.10.1",
+    "ramda": "^0.27.1",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "react-router-dom": "^5.2.0",

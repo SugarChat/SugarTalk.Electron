@@ -1,18 +1,18 @@
 import React from 'react';
-import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
+import { HashRouter as Router, Switch } from 'react-router-dom';
 import './App.global.scss';
 import routes from './screens';
+import { AuthRoute } from './services/routes/auth-router';
+import { RootStoreProvider } from './contexts/root-store-provider';
 
 export default function App() {
   return (
-    <Router>
-      <Switch>
-        <Route exact path="/join" component={routes.JoinMeeting} />
-        <Route exact path="/schedule" component={routes.ScheduleMeeting} />
-        <Route exact path="/meeting" component={routes.Meeting} />
-        <Route exact path="/meeting-list" component={routes.MeetingList} />
-        <Route path="/" component={routes.Login} />
-      </Switch>
-    </Router>
+    <RootStoreProvider>
+      <Router>
+        <Switch>
+          <AuthRoute routers={routes} />
+        </Switch>
+      </Router>
+    </RootStoreProvider>
   );
 }

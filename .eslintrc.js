@@ -7,6 +7,9 @@ module.exports = {
     'promise/always-return': 'off', // 禁止 async await 必须retuan 值
     'jsx-a11y/no-static-element-interactions': 'off', // 禁止div元素 必须添加role, onClick不报错 例如: role=button
     'jsx-a11y/click-events-have-key-events': 'off', // 禁止不能单独使用onClick, 要使用onMouseDown
+    'no-return-await': 'off',
+    '@typescript-eslint/no-empty-interface': 'off',
+    'react/prop-types': 'off',
   },
   parserOptions: {
     ecmaVersion: 2020,
