@@ -10,16 +10,17 @@ export const RootStoreProvider: FunctionComponent = ({ children }) => {
       switch (action.type) {
         case 'UpdateIdToken':
           newRootStore.userStore.idToken = action.payload;
-          return { ...newRootStore };
+          break;
         case 'UpdateUserInfo':
           newRootStore.userStore.userInfo = action.payload;
-          return { ...newRootStore };
+          break;
         case 'UpdateMettings':
           newRootStore.mettingStore.historyMettings = action.payload;
-          return { ...newRootStore };
+          break;
         default:
           throw new Error();
       }
+      return newRootStore;
     },
     BaseStoreInstance
   );
