@@ -15,7 +15,7 @@ export const RootStoreProvider: FunctionComponent = ({ children }) => {
           newRootStore.userStore.userInfo = action.payload;
           break;
         case 'UpdateMeetings':
-          newRootStore.mettingStore.historyMettings = action.payload;
+          newRootStore.mettingStore.historyMeetings = action.payload;
           break;
         default:
           throw new Error();

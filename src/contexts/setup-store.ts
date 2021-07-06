@@ -7,13 +7,13 @@ export interface IRootStoreAction {
 
 export interface IRootStore {
   userStore: { idToken: string; userInfo: { name: string; avatar: string } };
-  mettingStore: { historyMettings: [] };
+  mettingStore: { historyMeetings: [] };
   dispatch: React.Dispatch<IRootStoreAction>;
 }
 
 export const BaseStoreInstance: IRootStore = {
   userStore: { idToken: '', userInfo: { name: '', avatar: '' } },
-  mettingStore: { historyMettings: [] },
+  mettingStore: { historyMeetings: [] },
   dispatch: (value) => {},
 };
 
