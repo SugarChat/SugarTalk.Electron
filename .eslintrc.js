@@ -10,6 +10,8 @@ module.exports = {
     'no-return-await': 'off',
     '@typescript-eslint/no-empty-interface': 'off',
     'react/prop-types': 'off',
+    'react/jsx-props-no-spreading': 'off',
+    'jsx-a11y/media-has-caption': 'off',
   },
   parserOptions: {
     ecmaVersion: 2020,
