@@ -1,6 +1,6 @@
-import React, { FunctionComponent } from 'react';
+import React, { FunctionComponent, useEffect } from 'react';
 import { Settings } from '@material-ui/icons';
-import { Avatar, Button } from '@material-ui/core';
+import { Avatar } from '@material-ui/core';
 import { useHistory } from 'react-router-dom';
 import { Header } from '../../components/header';
 import logo from './images/logo.jpg';
@@ -13,11 +13,12 @@ export const Login: FunctionComponent = () => {
   const { userStore } = useStores();
   const { onLogin } = useLoginLogic();
   const history = useHistory();
-  const onLoginClick = () => {
+
+  useEffect(() => {
     if (userStore.idToken) {
-      history.push('/MeetingList');
+      history.replace('/MeetingList');
     }
-  };
+  }, [userStore.idToken, history]);
 
   return (
     <PageScreen>
@@ -27,24 +28,9 @@ export const Login: FunctionComponent = () => {
       </div>
       <div style={styles.content}>
         <img src={logo} alt="" />
-        <Button
-          style={styles.joinMeeting}
-          variant="contained"
-          color="primary"
-          disableElevation
-          onClick={() => {
-            onLoginClick();
-          }}
-        >
-          加入会议
-        </Button>
-
-        <Button style={styles.login} variant="outlined">
-          注册/登录
-        </Button>
 
         <div style={styles.otherLogin}>
-          <div style={styles.otherLoginText}>其他登录方式</div>
+          <div style={styles.otherLoginText}>登录方式</div>
           <div style={styles.line} />
         </div>
 

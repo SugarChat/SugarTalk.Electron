@@ -3,7 +3,14 @@ import { clone } from 'ramda';
 import { IRootStore, IRootStoreAction, BaseStoreInstance } from './setup-store';
 import { RootStoreContextProvider } from './root-context';
 
-export const RootStoreProvider: FunctionComponent = ({ children }) => {
+export interface IRootStoreProviderProps {
+  rootStoreFromLocalStorage: IRootStore;
+}
+
+export const RootStoreProvider: FunctionComponent<IRootStoreProviderProps> = ({
+  rootStoreFromLocalStorage,
+  children,
+}) => {
   const [state, dispatch] = useReducer(
     (rootStore: IRootStore, action: IRootStoreAction) => {
       const newRootStore = clone(rootStore);
@@ -20,9 +27,10 @@ export const RootStoreProvider: FunctionComponent = ({ children }) => {
         default:
           throw new Error();
       }
+      localStorage.setItem('rootStore', JSON.stringify(newRootStore));
       return newRootStore;
     },
-    BaseStoreInstance
+    rootStoreFromLocalStorage ?? BaseStoreInstance
   );
 
   return (
