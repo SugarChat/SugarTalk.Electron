@@ -3,14 +3,13 @@ import http from 'http';
 import url from 'url';
 import * as electron from 'electron';
 
-export const getAuthenticatedClient = (): Promise<OAuth2Client> => {
+export const getGoogleAuthenticatedClient = (): Promise<OAuth2Client> => {
   return new Promise((resolve, reject) => {
     const oAuth2Client = new OAuth2Client(
       '542556032036-kch832eb37jpm8s9aafjf043jl25gjj7.apps.googleusercontent.com',
       'cdeRffCHhMvTMek20Eb8KYbY', // 这里要从后台获取
       'http://localhost:3000'
     );
-
     const authorizeUrl = oAuth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: 'https://www.googleapis.com/auth/userinfo.profile',
