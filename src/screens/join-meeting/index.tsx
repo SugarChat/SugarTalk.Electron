@@ -7,7 +7,10 @@ import {
 import React, { useState } from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 import { Header } from '../../components/header';
-import * as styles from './styles';
+import { MeetingDto } from '../../dtos/ScheduleMeetingCommand';
+import { SugarTalkResponse } from '../../dtos/SugarTalkResponse';
+import { api } from '../../services/api';
+import styles from './index.scss';
 
 export interface MeetingInfo {
   meetingId: string;
@@ -17,6 +20,11 @@ export interface MeetingInfo {
 }
 
 export const JoinMeeting = ({ history }: RouteComponentProps) => {
+  const onJoinClick = () => {};
+  const onBackClick = () => {
+    history.goBack();
+  };
+
   const defaultMeetingInfo: MeetingInfo = {
     meetingId: '',
     userName: '',
@@ -25,13 +33,6 @@ export const JoinMeeting = ({ history }: RouteComponentProps) => {
   };
 
   const [meetingInfo, setMeetingInfo] = useState(defaultMeetingInfo);
-
-  const onJoinClick = () => {
-    history.push('/meeting', meetingInfo);
-  };
-  const onBackClick = () => {
-    history.goBack();
-  };
 
   const onMeetingIdChanged = (meetingId: string) => {
     const thisMeetingInfo = {
@@ -66,32 +67,32 @@ export const JoinMeeting = ({ history }: RouteComponentProps) => {
   };
 
   return (
-    <div style={styles.root}>
-      <Header title="加入会议"></Header>
-      <form style={styles.content} noValidate autoComplete="off">
-        <div style={styles.contentItem}>
+    <div className={styles.root}>
+      <Header title="加入会议" />
+      <form className={styles.content} noValidate autoComplete="off">
+        <div className={styles.contentItem}>
           <TextField
             id="outlined-basic"
             label="会议号"
             variant="outlined"
-            fullWidth={true}
+            fullWidth
             size="small"
             value={meetingInfo.meetingId}
             onChange={(e) => onMeetingIdChanged(e.target.value)}
           />
         </div>
-        <div style={styles.contentItem}>
+        <div className={styles.contentItem}>
           <TextField
             id="outlined-basic2"
             label="你的名称"
             variant="outlined"
-            fullWidth={true}
+            fullWidth
             size="small"
             value={meetingInfo.userName}
             onChange={(e) => onUserNameChanged(e.target.value)}
           />
         </div>
-        <div style={styles.contentItem}>
+        <div className={styles.contentItem}>
           <FormControlLabel
             control={
               <Checkbox
@@ -104,7 +105,7 @@ export const JoinMeeting = ({ history }: RouteComponentProps) => {
             label="自动连接音频"
           />
         </div>
-        <div style={styles.contentItem}>
+        <div className={styles.contentItem}>
           <FormControlLabel
             control={
               <Checkbox
@@ -117,7 +118,7 @@ export const JoinMeeting = ({ history }: RouteComponentProps) => {
             label="入会开启摄像头"
           />
         </div>
-        <div style={styles.joinButtonWrapper}>
+        <div className={styles.joinButtonWrapper}>
           <Button
             style={{ width: '100%', height: '40px' }}
             variant="contained"

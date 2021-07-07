@@ -1,28 +1,32 @@
-import React from 'react';
+import React, { FunctionComponent } from 'react';
 import { Settings } from '@material-ui/icons';
 import { Avatar, Button } from '@material-ui/core';
-import { RouteComponentProps } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 import { Header } from '../../components/header';
 import logo from './images/logo.jpg';
 import * as styles from './styles';
 import { useLoginLogic } from './hook';
+import { PageScreen } from '../../components/page-screen/index';
+import { useStores } from '../../contexts/root-context';
 
-export const Login = ({ history }: RouteComponentProps) => {
+export const Login: FunctionComponent = () => {
+  const { userStore } = useStores();
   const { onLogin } = useLoginLogic();
-
+  const history = useHistory();
   const onLoginClick = () => {
-    history.push('/meeting-list');
+    if (userStore.idToken) {
+      history.push('/MeetingList');
+    }
   };
 
   return (
-    <div style={styles.root}>
-      <Header title="登录" />
+    <PageScreen>
+      <Header title="SugarTalk" />
       <div style={styles.settingWrapper}>
         <Settings style={styles.settings} />
       </div>
       <div style={styles.content}>
         <img src={logo} alt="" />
-
         <Button
           style={styles.joinMeeting}
           variant="contained"
@@ -59,6 +63,6 @@ export const Login = ({ history }: RouteComponentProps) => {
           </div>
         </div>
       </div>
-    </div>
+    </PageScreen>
   );
 };

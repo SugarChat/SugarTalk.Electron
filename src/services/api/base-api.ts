@@ -12,12 +12,22 @@ export const api: AxiosInstance = axios.create({
     Accept: 'application/json',
   },
 });
+
+api.interceptors.request.use(
+  (request) => {
+    return request;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 api.interceptors.response.use(
-  function (response) {
+  (response) => {
     // Sugartalk has a unified response
     return response.data;
   },
-  function (error) {
+  (error) => {
     // Any status codes that falls outside the range of 2xx cause this function to trigger
     // Do something with response error
     return Promise.reject(error);
