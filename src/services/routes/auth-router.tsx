@@ -20,8 +20,6 @@ export const AuthRoute: FunctionComponent<IAuthRouterProps> = ({ routers }) => {
   }, [userStore]);
 
   const authRoutes = useMemo(() => {
-    console.log(pathname, isLogin);
-
     return routers.map((route) => {
       // 能直接访问
       if (!route.auth) {
