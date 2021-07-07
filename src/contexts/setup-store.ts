@@ -18,7 +18,7 @@ export const BaseStoreInstance: IRootStore = {
 };
 
 export const setupRootStore = () => {
-  const storeString = localStorage.getItem('store');
+  const storeString = localStorage.getItem('rootStore');
   try {
     if (!storeString) {
       return BaseStoreInstance;
