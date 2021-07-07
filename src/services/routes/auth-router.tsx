@@ -3,7 +3,6 @@ import { Route, useLocation, useHistory } from 'react-router-dom';
 import { IRoute } from '../../screens/index';
 import { Login } from '../../screens/login/index';
 import { useStores } from '../../contexts/root-context';
-import { MeetingList } from '../../screens/meeting-list';
 
 export interface IAuthRouterProps {
   routers: IRoute[];
