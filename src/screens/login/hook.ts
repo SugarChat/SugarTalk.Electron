@@ -15,7 +15,6 @@ export const useLoginLogic = () => {
           type: 'UpdateIdToken',
           payload: result?.credentials.id_token,
         });
-        console.log(result?.credentials.id_token);
       })
       .catch((e) => {
         console.log(e);

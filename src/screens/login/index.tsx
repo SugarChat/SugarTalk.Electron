@@ -18,7 +18,7 @@ export const Login: FunctionComponent = () => {
     if (userStore.idToken) {
       history.replace('/MeetingList');
     }
-  }, [userStore.idToken, history]);
+  }, [userStore?.idToken]);
 
   return (
     <PageScreen>

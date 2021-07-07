@@ -16,7 +16,7 @@ export const AuthRoute: FunctionComponent<IAuthRouterProps> = ({ routers }) => {
 
   const isLogin = useMemo(() => {
     return Boolean(userStore.idToken);
-  }, [userStore]);
+  }, [userStore.idToken]);
 
   const authRoutes = useMemo(() => {
     return routers.map((route) => {
