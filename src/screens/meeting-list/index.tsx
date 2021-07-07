@@ -25,7 +25,7 @@ export const MeetingList = () => {
         <Settings style={{ color: '#333', width: '25px', height: '25px' }} />
       </div>
       <div className={styles.content}>
-        <Button onClick={() => history.goBack()}>Back</Button>
+        {/* <Button onClick={() => history.goBack()}>Back</Button> */}
         <Button onClick={joinMeeting}>加入会议</Button>
         <Button onClick={onScheduleMeetingClicked}>快速会议</Button>
       </div>

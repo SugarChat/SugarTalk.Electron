@@ -1,5 +1,5 @@
 import React, { FunctionComponent, useMemo } from 'react';
-import { Route, Redirect, useLocation, useHistory } from 'react-router-dom';
+import { Route, useLocation, useHistory } from 'react-router-dom';
 import { IRoute } from '../../screens/index';
 import { Login } from '../../screens/login/index';
 import { useStores } from '../../contexts/root-context';
@@ -16,7 +16,7 @@ export const AuthRoute: FunctionComponent<IAuthRouterProps> = ({ routers }) => {
 
   const isLogin = useMemo(() => {
     return Boolean(userStore.idToken);
-  }, [userStore]);
+  }, [userStore.idToken]);
 
   const authRoutes = useMemo(() => {
     return routers.map((route) => {
