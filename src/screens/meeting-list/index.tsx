@@ -10,7 +10,7 @@ export const MeetingList = () => {
   const history = useHistory();
 
   const joinMeeting = () => {
-    history.push('/join');
+    history.push('/JoinMeeting');
   };
 
   const onScheduleMeetingClicked = async () => {

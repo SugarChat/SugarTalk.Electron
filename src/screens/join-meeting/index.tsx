@@ -4,13 +4,12 @@ import {
   FormControlLabel,
   TextField,
 } from '@material-ui/core';
+import electron from 'electron';
 import React, { useState } from 'react';
-import { RouteComponentProps } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
+import queryString from 'query-string';
 import { Header } from '../../components/header';
-import { MeetingDto } from '../../dtos/ScheduleMeetingCommand';
-import { SugarTalkResponse } from '../../dtos/SugarTalkResponse';
-import { api } from '../../services/api';
-import styles from './index.scss';
+import * as styles from './styles';
 
 export interface MeetingInfo {
   meetingId: string;
@@ -19,11 +18,8 @@ export interface MeetingInfo {
   connectedWithVideo: boolean;
 }
 
-export const JoinMeeting = ({ history }: RouteComponentProps) => {
-  const onJoinClick = () => {};
-  const onBackClick = () => {
-    history.goBack();
-  };
+export const JoinMeeting: React.FC = () => {
+  const history = useHistory();
 
   const defaultMeetingInfo: MeetingInfo = {
     meetingId: '',
@@ -33,6 +29,37 @@ export const JoinMeeting = ({ history }: RouteComponentProps) => {
   };
 
   const [meetingInfo, setMeetingInfo] = useState(defaultMeetingInfo);
+
+  const onJoinClick = () => {
+    const meetingInfoQuery = queryString.stringify(meetingInfo);
+
+    const currentWindow = electron.remote.getCurrentWindow();
+
+    currentWindow.hide();
+
+    const meetingWindow = new electron.remote.BrowserWindow({
+      show: true,
+      width: 1280,
+      height: 720,
+      movable: true,
+      modal: true,
+      webPreferences: {
+        nodeIntegration: true,
+        enableRemoteModule: true,
+      },
+    });
+    meetingWindow.loadURL(
+      `file://${__dirname}/index.html#/meeting?${meetingInfoQuery}`
+    );
+
+    meetingWindow.once('closed', () => {
+      currentWindow.show();
+    });
+  };
+
+  const onBackClick = () => {
+    history.goBack();
+  };
 
   const onMeetingIdChanged = (meetingId: string) => {
     const thisMeetingInfo = {
@@ -67,32 +94,28 @@ export const JoinMeeting = ({ history }: RouteComponentProps) => {
   };
 
   return (
-    <div className={styles.root}>
+    <div style={styles.root}>
       <Header title="加入会议" />
-      <form className={styles.content} noValidate autoComplete="off">
-        <div className={styles.contentItem}>
+      <form style={styles.content} noValidate autoComplete="off">
+        <div style={styles.contentItem}>
           <TextField
-            id="outlined-basic"
             label="会议号"
             variant="outlined"
             fullWidth
-            size="small"
             value={meetingInfo.meetingId}
             onChange={(e) => onMeetingIdChanged(e.target.value)}
           />
         </div>
-        <div className={styles.contentItem}>
+        <div style={styles.contentItem}>
           <TextField
-            id="outlined-basic2"
             label="你的名称"
             variant="outlined"
             fullWidth
-            size="small"
             value={meetingInfo.userName}
             onChange={(e) => onUserNameChanged(e.target.value)}
           />
         </div>
-        <div className={styles.contentItem}>
+        <div style={styles.contentItem}>
           <FormControlLabel
             control={
               <Checkbox
@@ -105,7 +128,7 @@ export const JoinMeeting = ({ history }: RouteComponentProps) => {
             label="自动连接音频"
           />
         </div>
-        <div className={styles.contentItem}>
+        <div style={styles.contentItem}>
           <FormControlLabel
             control={
               <Checkbox
@@ -118,7 +141,7 @@ export const JoinMeeting = ({ history }: RouteComponentProps) => {
             label="入会开启摄像头"
           />
         </div>
-        <div className={styles.joinButtonWrapper}>
+        <div style={styles.joinButtonWrapper}>
           <Button
             style={{ width: '100%', height: '40px' }}
             variant="contained"

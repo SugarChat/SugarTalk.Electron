@@ -34,9 +34,14 @@ export const WebRTC = (props: IWebRTC) => {
 
     videoRef.current.srcObject = localStream;
 
-    localStream
-      .getTracks()
-      .forEach((track) => rtcPeer.addTrack(track, localStream));
+    localStream.getTracks().forEach((track: MediaStreamTrack) => {
+      rtcPeer.addTrack(track, localStream);
+      if (track.kind === 'audio') {
+        track.enabled = voice;
+      } else if (track.kind === 'video') {
+        track.enabled = video;
+      }
+    });
 
     const offer = await rtcPeer.createOffer({
       offerToReceiveAudio: false,
