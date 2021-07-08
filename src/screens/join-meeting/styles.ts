@@ -5,7 +5,7 @@ export const root: CSSProperties = {
   flexDirection: 'column',
   alignItems: 'flex-start',
   height: '100%',
-  padding: '30px 10px 30px 10px',
+  padding: '0px 10px 30px 10px',
 };
 
 export const content: CSSProperties = {
