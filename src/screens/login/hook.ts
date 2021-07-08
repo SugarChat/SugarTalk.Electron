@@ -1,6 +1,7 @@
 // import * as electron from 'electron';
 import { useState } from 'react';
-import { getGoogleAuthenticatedClient } from './login-service';
+import { useSnackbar } from 'notistack';
+import { googleAuthenticated, facebookAuthenticated } from './login-service';
 import { useStores } from '../../contexts/root-context';
 
 export type LoginType = 'Google' | 'Facebook' | 'Wechat';
@@ -8,7 +9,6 @@ export type LoginType = 'Google' | 'Facebook' | 'Wechat';
 export interface ILoginProps {
   loginType: LoginType;
   onSuccess: () => void;
-  onError: (e: Error) => void;
 }
 
 export interface ILoginPlatform extends ILoginProps {
@@ -16,40 +16,40 @@ export interface ILoginPlatform extends ILoginProps {
 }
 
 export const useLoginLogic = () => {
+  const { enqueueSnackbar } = useSnackbar();
   const [hasLoginError, setLoginError] = useState<boolean>(false);
   const { dispatch } = useStores();
+
+  const onHandleError = () => {
+    setLoginError(true);
+    enqueueSnackbar('Login fail', {
+      variant: 'error',
+      autoHideDuration: 6000,
+    });
+  };
 
   const loginPlatformList: ILoginPlatform[] = [
     {
       loginType: 'Wechat',
       imageSrc: '../assets/login/wechat.png',
       onSuccess: () => {},
-      onError: (e: Error) => {
-        setLoginError(true);
-      },
     },
     {
       loginType: 'Google',
       imageSrc: '../assets/login/google.png',
       onSuccess: () => {},
-      onError: (e: Error) => {
-        setLoginError(true);
-      },
     },
     {
       loginType: 'Facebook',
       imageSrc: '../assets/login/facebook.png',
       onSuccess: () => {},
-      onError: (e: Error) => {
-        setLoginError(true);
-      },
     },
   ];
 
-  const onLogin = ({ loginType, onSuccess, onError }: ILoginProps) => {
+  const onLogin = ({ loginType, onSuccess }: ILoginProps) => {
     switch (loginType) {
       case 'Google':
-        getGoogleAuthenticatedClient()
+        googleAuthenticated()
           .then((result) => {
             dispatch({
               type: 'UpdateIdToken',
@@ -57,21 +57,16 @@ export const useLoginLogic = () => {
             });
             onSuccess();
           })
-          .catch((e) => {
-            onError(e);
+          .catch(() => {
+            onHandleError();
           });
         break;
       case 'Facebook':
-        getGoogleAuthenticatedClient()
-          .then((result) => {
-            dispatch({
-              type: 'UpdateIdToken',
-              payload: result?.credentials.id_token,
-            });
+        facebookAuthenticated()
+          .then(({ accessToken }) => {
+            console.log(accessToken);
           })
-          .catch((e) => {
-            onError(e);
-          });
+          .catch(() => onHandleError());
         break;
       case 'Wechat':
         break;

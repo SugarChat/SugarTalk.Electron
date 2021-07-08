@@ -29,7 +29,6 @@ export const Login: FunctionComponent = () => {
           onLogin({
             loginType: x.loginType,
             onSuccess: x.onSuccess,
-            onError: x.onError,
           })
         }
       >
