@@ -129,6 +129,7 @@ export const WebRTC = (props: IWebRTC) => {
         width="300"
         height="300"
         style={styles.video}
+        muted={isSelf}
       />
       <Box component="div" style={styles.userName}>
         {userName}
