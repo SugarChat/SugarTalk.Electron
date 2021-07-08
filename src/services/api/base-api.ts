@@ -1,12 +1,13 @@
 import axios, { AxiosInstance } from 'axios';
 import * as types from './api.types';
 import Env from '../../config/env';
+import { loadRootStore } from '../../contexts/setup-store';
 
 axios.defaults.headers = {
   'Content-Type': 'application/json',
 };
 
-export const api: AxiosInstance = axios.create({
+export const api : AxiosInstance = axios.create({
   baseURL: Env.apiUrl,
   headers: {
     Accept: 'application/json',
@@ -15,6 +16,7 @@ export const api: AxiosInstance = axios.create({
 
 api.interceptors.request.use(
   (request) => {
+    request.headers['Authorization'] = loadRootStore()?.userStore?.idToken ?? ""
     return request;
   },
   (error) => {

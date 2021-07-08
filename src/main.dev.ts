@@ -76,7 +76,7 @@ const createWindow = async () => {
       nodeIntegration: true,
       enableRemoteModule: true,
     },
-    titleBarStyle: 'hiddenInset',
+    // titleBarStyle: 'hiddenInset',
   });
 
   mainWindow.loadURL(`file://${__dirname}/index.html`);

@@ -5,10 +5,10 @@ import './App.global.scss';
 import routes from './screens';
 import { AuthRoute } from './services/routes/auth-router';
 import { RootStoreProvider } from './contexts/root-store-provider';
-import { setupRootStore } from './contexts/setup-store';
+import { loadRootStore } from './contexts/setup-store';
 
 export default function App() {
-  const rootStoreFromLocalStorage = setupRootStore();
+  const rootStoreFromLocalStorage = loadRootStore();
   return (
     <RootStoreProvider rootStoreFromLocalStorage={rootStoreFromLocalStorage}>
       <SnackbarProvider maxSnack={3}>

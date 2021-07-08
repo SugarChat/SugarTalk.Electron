@@ -40,7 +40,6 @@ export const Login: FunctionComponent = () => {
 
   return (
     <PageScreen>
-      <Header title="SugarTalk" />
       <div style={styles.settingWrapper}>
         <Settings style={styles.settings} />
       </div>
