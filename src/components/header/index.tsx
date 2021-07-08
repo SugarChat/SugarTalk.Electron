@@ -1,6 +1,5 @@
 import React, { FunctionComponent } from 'react';
 import * as styles from './styles';
-import styless from './index.scss';
 
 export interface HeaderProps {
   leftComponent?: React.ReactNode;
@@ -17,7 +16,7 @@ export const Header: FunctionComponent<HeaderProps> = ({
     typeof Element === 'function' ? Element() : Element;
 
   return (
-    <div style={styles.rootHeader} className={styless.rootHeader}>
+    <div style={styles.rootHeader}>
       <div>{renderElement(leftComponent)}</div>
       <div style={styles.title}>{title}</div>
       <div>{renderElement(rightComponent)}</div>

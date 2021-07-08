@@ -17,7 +17,7 @@ export const BaseStoreInstance: IRootStore = {
   dispatch: (value) => {},
 };
 
-export const setupRootStore = () => {
+export const loadRootStore = (): IRootStore => {
   const storeString = localStorage.getItem('rootStore');
   try {
     if (!storeString) {
