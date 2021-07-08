@@ -31,8 +31,14 @@ const ToolbarButton = (props: IToolbarButton) => {
   );
 };
 
-export const FooterToolbar = () => {
+interface IFooterToolbar {
+  onCloseMeeting: () => void;
+}
+
+export const FooterToolbar = (props: IFooterToolbar) => {
   const { video, setVideo, voice, setVoice } = React.useContext(MeetingContext);
+
+  const { onCloseMeeting } = props;
 
   return (
     <Box style={styles.footerToolbarContainer}>
@@ -55,7 +61,11 @@ export const FooterToolbar = () => {
         </Grid>
         <Grid item container xs={6} justify="flex-end" spacing={3}>
           <Grid item>
-            <Button variant="outlined" color="secondary">
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={() => onCloseMeeting()}
+            >
               结束会议
             </Button>
           </Grid>

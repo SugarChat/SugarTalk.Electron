@@ -6,7 +6,13 @@ import VerifiedUserIcon from '@material-ui/icons/VerifiedUser';
 import FullscreenIcon from '@material-ui/icons/Fullscreen';
 import * as styles from './styles';
 
-export const StatusBar = () => {
+interface IStatusBar {
+  onFullScreen: () => void;
+}
+
+export const StatusBar = (props: IStatusBar) => {
+  const { onFullScreen } = props;
+
   return (
     <Grid
       container
@@ -24,17 +30,17 @@ export const StatusBar = () => {
         spacing={1}
       >
         <Grid item>
-          <IconButton size="small">
+          <IconButton size="small" disabled>
             <InfoIcon fontSize="small" htmlColor="#5e6166" />
           </IconButton>
         </Grid>
         <Grid item>
-          <IconButton size="small">
+          <IconButton size="small" disabled>
             <VerifiedUserIcon fontSize="small" htmlColor="#006fff" />
           </IconButton>
         </Grid>
         <Grid item>
-          <IconButton size="small">
+          <IconButton size="small" disabled>
             <SignalCellularAltIcon fontSize="small" htmlColor="#00cc66" />
           </IconButton>
         </Grid>
@@ -48,11 +54,11 @@ export const StatusBar = () => {
         justify="flex-end"
         spacing={1}
       >
-        <Grid item>
+        {/* <Grid item>
           <Box style={styles.statusBarTimer}>25:49:25</Box>
-        </Grid>
+        </Grid> */}
         <Grid item>
-          <IconButton size="small">
+          <IconButton size="small" onClick={() => onFullScreen()}>
             <FullscreenIcon fontSize="small" htmlColor="#76787d" />
           </IconButton>
         </Grid>
