@@ -1,13 +1,16 @@
 import React from 'react';
 import { Box } from '@material-ui/core';
 import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
+import queryString from 'query-string';
+import { useLocation } from 'react-router-dom';
+import electron from 'electron';
 import { PageScreen } from '../../components/page-screen/index';
 import { StatusBar } from './components/status-bar';
 import * as styles from './styles';
 import { FooterToolbar } from './components/footer-toolbar';
 import { WebRTC } from './components/web-rtc';
 import { useStores } from '../../contexts/root-context';
-import { MeetingProvider } from './context';
+import { MeetingContext, MeetingProvider } from './context';
 import Env from '../../config/env';
 
 interface IUserSession {
@@ -25,12 +28,16 @@ interface IUser {
 const username = 'tom';
 const meetingNumber = '35507';
 
-export const Meeting: React.FC = () => {
+const MeetingScreen: React.FC = () => {
+  const location = useLocation();
+
   const { userStore } = useStores();
 
   const serverRef = React.useRef<HubConnection>();
 
   const [userSessions, setUserSessions] = React.useState<IUserSession[]>([]);
+
+  const { setVideo, setVoice } = React.useContext(MeetingContext);
 
   const createUserSession = (user: IUser, isSelf: boolean) => {
     const userSession: IUserSession = {
@@ -53,12 +60,39 @@ export const Meeting: React.FC = () => {
     );
   };
 
+  const onCloseMeeting = () => {
+    electron.remote.getCurrentWindow().close();
+  };
+
+  const onFullScreen = () => {
+    const currentWindow = electron.remote.getCurrentWindow();
+    if (currentWindow.fullScreen) {
+      currentWindow.setFullScreen(false);
+    } else {
+      currentWindow.setFullScreen(true);
+    }
+  };
+
   React.useEffect(() => {
-    const wsUrl = `${Env.apiUrl}meetingHub?username=${username}&meetingNumber=${meetingNumber}`;
+    const meetingInfo = queryString.parse(location.search, {
+      parseBooleans: true,
+    });
+
+    setVideo(meetingInfo.connectedWithVideo as boolean);
+    setVoice(meetingInfo.connectedWithAudio as boolean);
+
+    const wsUrl = `${Env.apiUrl}meetingHub?username=${meetingInfo.userName}&meetingNumber=${meetingInfo.meetingId}`;
 
     serverRef.current = new HubConnectionBuilder()
       .withUrl(wsUrl, { accessTokenFactory: () => userStore.idToken })
       .build();
+
+    serverRef.current.onclose((error?: Error) => {
+      if (error?.message.includes('MeetingNotFoundException')) {
+        alert('Meeting not found.');
+        electron.remote.getCurrentWindow().close();
+      }
+    });
 
     serverRef.current.on('SetLocalUser', (localUser: IUser) => {
       createUserSession(localUser, true);
@@ -78,7 +112,12 @@ export const Meeting: React.FC = () => {
       removeUserSession(connectionId);
     });
 
-    serverRef.current.start();
+    serverRef.current.start().catch((error?: any) => {
+      if (error?.statusCode === 401) {
+        alert('Unauthorized.');
+        electron.remote.getCurrentWindow().close();
+      }
+    });
 
     return () => {
       serverRef.current?.stop();
@@ -87,23 +126,27 @@ export const Meeting: React.FC = () => {
 
   return (
     <PageScreen style={styles.root}>
-      <MeetingProvider>
-        <StatusBar />
-        <Box style={styles.webRTCContainer}>
-          {userSessions.map((userSession, key) => {
-            return (
-              <WebRTC
-                key={key.toString()}
-                serverRef={serverRef}
-                id={userSession.id}
-                userName={userSession.userName}
-                isSelf={userSession.isSelf}
-              />
-            );
-          })}
-        </Box>
-        <FooterToolbar />
-      </MeetingProvider>
+      <StatusBar onFullScreen={() => onFullScreen()} />
+      <Box style={styles.webRTCContainer}>
+        {userSessions.map((userSession, key) => {
+          return (
+            <WebRTC
+              key={key.toString()}
+              serverRef={serverRef}
+              id={userSession.id}
+              userName={userSession.userName}
+              isSelf={userSession.isSelf}
+            />
+          );
+        })}
+      </Box>
+      <FooterToolbar onCloseMeeting={() => onCloseMeeting()} />
     </PageScreen>
   );
 };
+
+export const Meeting = () => (
+  <MeetingProvider>
+    <MeetingScreen />
+  </MeetingProvider>
+);
