@@ -1,34 +1,43 @@
 import React from 'react';
 import { useHistory } from 'react-router-dom';
-import { Settings } from '@material-ui/icons';
-import { Button } from '@material-ui/core';
-import Api from '../../services/api';
-import styles from './index.scss';
-import { Header } from '../../components/header';
+import { UserInfo } from './user-info';
+import * as styles from './styles';
+import { JoinMeeting } from './join-meeting';
+import { BeginMeeting } from './begin-meeting';
+import { ScheduleMeeting } from './schedule-meeting';
+import { Setting } from './setting';
 
 export const MeetingList = () => {
   const history = useHistory();
 
-  const joinMeeting = () => {
-    history.push('/join');
-  };
-
-  const onScheduleMeetingClicked = async () => {
-    const meetingInfo = await Api.meeting.scheduleMeeting((e) => {});
-    console.log(meetingInfo);
-  };
-
   return (
-    <div className={styles.root}>
-      <Header title="SugarTalk" />
-      <div className={styles.settingWrapper}>
-        <Settings style={{ color: '#333', width: '25px', height: '25px' }} />
+    <div style={styles.root}>
+      <div>
+        <div style={styles.userInfoDiv}>
+          <UserInfo />
+        </div>
+        <div style={styles.settingDiv}>
+          <Setting />
+        </div>
+        <div style={styles.clear} />
       </div>
-      <div className={styles.content}>
-        {/* <Button onClick={() => history.goBack()}>Back</Button> */}
-        <Button onClick={joinMeeting}>加入会议</Button>
-        <Button onClick={onScheduleMeetingClicked}>快速会议</Button>
+
+      <div>
+        <table style={styles.table}>
+          <td style={styles.tableTd}>
+            <JoinMeeting />
+          </td>
+          <td style={styles.tableTd}>
+            <BeginMeeting />
+          </td>
+          <td style={styles.tableTd}>
+            <ScheduleMeeting />
+          </td>
+        </table>
       </div>
+
+      <div style={styles.line} />
+      <div style={styles.background} />
     </div>
   );
 };
