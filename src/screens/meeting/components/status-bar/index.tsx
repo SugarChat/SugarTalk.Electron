@@ -54,9 +54,9 @@ export const StatusBar = (props: IStatusBar) => {
         justify="flex-end"
         spacing={1}
       >
-        <Grid item>
+        {/* <Grid item>
           <Box style={styles.statusBarTimer}>25:49:25</Box>
-        </Grid>
+        </Grid> */}
         <Grid item>
           <IconButton size="small" onClick={() => onFullScreen()}>
             <FullscreenIcon fontSize="small" htmlColor="#76787d" />
