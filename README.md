@@ -12,6 +12,26 @@ Start the app in the dev environment:
 yarn start
 ```
 
+## Packaging
+
+To package apps for the local platform:
+
+```bash
+yarn package
+```
+
+You can debug your production build with devtools by simply setting the DEBUG_PROD env variable:
+
+```bash
+yarn cross-env DEBUG_PROD=true yarn package
+```
+
+Remote debugging, browser open http://127.0.0.1:8315/
+
+```bash
+open /SugarTalk.Electron/release/mac/ElectronReact.app --args --remote-debugging-port=8315
+```
+
 # 代码规范
 
 ### 命名
