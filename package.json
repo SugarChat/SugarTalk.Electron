@@ -49,7 +49,11 @@
       "hardenedRuntime": true,
       "entitlements": "assets/entitlements.mac.plist",
       "entitlementsInherit": "assets/entitlements.mac.plist",
-      "gatekeeperAssess": false
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "SugarTalk would like to access your microphone so that people can communicate by audio.",
+        "NSCameraUsageDescription": "SugarTalk would like to access your camera so that people can see each other during the meeting."
+      }
     },
     "dmg": {
       "contents": [
