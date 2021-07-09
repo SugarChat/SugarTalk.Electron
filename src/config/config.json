@@ -1,3 +1,6 @@
 {
-  "apiUrl": "https://testtalk.yamimeal.io/"
+  "apiUrl": "https://testtalk.yamimeal.io/",
+  "googleClientId": "",
+  "googleClientSecret": "",
+  "googleRedirectUriPort": 3000
 }
