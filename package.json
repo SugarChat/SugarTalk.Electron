@@ -51,8 +51,8 @@
       "entitlementsInherit": "assets/entitlements.mac.plist",
       "gatekeeperAssess": false,
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "We need access to your microphone so people you talk to in a SugarTalk can hear you.",
-        "NSCameraUsageDescription": "Allow your conversational partners to see you in a SugarTalk. You can turn off your video anytime during a call."
+        "NSMicrophoneUsageDescription": "SugarTalk would like to access your microphone so that people can communicate by audio.",
+        "NSCameraUsageDescription": "SugarTalk would like to access your camera so that people can see each other during the meeting."
       }
     },
     "dmg": {
