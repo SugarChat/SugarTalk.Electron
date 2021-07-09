@@ -65,12 +65,12 @@ export const googleAuthenticated = (): Promise<OAuth2Client> => {
       });
 
       authWindow.on('close', () => {
-        server.close();
+        server?.close();
       });
     });
 
     server.on('error', (err: Error) => {
-      server.close();
+      server?.close();
       reject(err.message);
     });
   });
