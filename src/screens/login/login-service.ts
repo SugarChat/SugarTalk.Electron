@@ -1,5 +1,5 @@
 import { OAuth2Client } from 'google-auth-library';
-import http from 'http';
+import http, { IncomingMessage } from 'http';
 import Url from 'url';
 import FB from 'fb';
 import * as electron from 'electron';
@@ -7,66 +7,72 @@ import Env from '../../config/env';
 
 export const googleAuthenticated = (): Promise<OAuth2Client> => {
   return new Promise((resolve, reject) => {
+    const googleRedirectUri = `http://localhost:${Env.googleRedirectUriPort}`;
+
     const oAuth2Client = new OAuth2Client(
       Env.googleClientId,
       Env.googleClientSecret,
-      Env.googleRedirectUri
+      googleRedirectUri
     );
 
-    const authorizeUrl = oAuth2Client.generateAuthUrl({
-      access_type: 'offline',
-      scope: 'https://www.googleapis.com/auth/userinfo.profile',
-    });
+    const requestListener = async (request: IncomingMessage) => {
+      try {
+        if ((request.url as string).indexOf('code') > -1) {
+          const qs = new Url.URL(request.url as string, googleRedirectUri)
+            .searchParams;
+          const code = qs.get('code') as string;
+          const tokenResponse = await oAuth2Client.getToken(code);
+          oAuth2Client.setCredentials(tokenResponse.tokens);
+          resolve(oAuth2Client);
+        }
+      } catch (e) {
+        reject(e);
+      }
+    };
 
     const server = http
-      .createServer(async (req, _) => {
-        try {
-          if ((req.url as string).indexOf('code') > -1) {
-            const qs = new Url.URL(req.url as string, 'http://localhost:3000')
-              .searchParams;
-            const code = qs.get('code') as string;
-            // console.log(`Code is ${code}`);
-            server.close();
-            const r = await oAuth2Client.getToken(code);
-            oAuth2Client.setCredentials(r.tokens);
-            resolve(oAuth2Client);
-          }
-        } catch (e) {
-          reject(e);
-        }
-      })
-      .listen(3000, () => {
-        const authWindow = new electron.remote.BrowserWindow({
-          show: true,
-          width: 375,
-          height: 668,
-          movable: true,
-          modal: true,
-          webPreferences: {
-            nodeIntegration: true,
-            enableRemoteModule: true,
-          },
-        });
+      .createServer(requestListener)
+      .listen(Env.googleRedirectUriPort);
 
-        authWindow.webContents.userAgent =
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0';
-        authWindow.loadURL(authorizeUrl);
-
-        authWindow.webContents.on(
-          'did-redirect-navigation',
-          (_event, newUrl) => {
-            if (newUrl.includes('http://localhost:3000')) {
-              setTimeout(() => {
-                authWindow.close();
-              }, 300);
-            }
-          }
-        );
-
-        authWindow.on('close', () => {
-          server.close();
-        });
+    server.on('listening', () => {
+      const authorizeUrl = oAuth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: 'https://www.googleapis.com/auth/userinfo.profile',
       });
+
+      const authWindow = new electron.remote.BrowserWindow({
+        show: true,
+        width: 375,
+        height: 668,
+        movable: true,
+        modal: true,
+        webPreferences: {
+          nodeIntegration: true,
+          enableRemoteModule: true,
+        },
+      });
+
+      authWindow.webContents.userAgent =
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0';
+      authWindow.loadURL(authorizeUrl);
+
+      authWindow.webContents.on('did-redirect-navigation', (_event, newUrl) => {
+        if (newUrl.includes(googleRedirectUri)) {
+          setTimeout(() => {
+            authWindow.close();
+          }, 300);
+        }
+      });
+
+      authWindow.on('close', () => {
+        server.close();
+      });
+    });
+
+    server.on('error', (err: Error) => {
+      server.close();
+      reject(err.message);
+    });
   });
 };
 
