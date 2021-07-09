@@ -52,12 +52,19 @@ export const googleAuthenticated = (): Promise<OAuth2Client> => {
 
         authWindow.webContents.on(
           'did-redirect-navigation',
-          (event, newUrl) => {
-            setTimeout(() => {
-              authWindow.close();
-            }, 300);
+          (_event, newUrl) => {
+            if (newUrl.includes('http://localhost:3000')) {
+              setTimeout(() => {
+                authWindow.close();
+              }, 300);
+            }
           }
         );
+
+        authWindow.on('close', () => {
+          server.close();
+        });
+
         // open the browser to the authorize url to start the workflow
         // open(authorizeUrl, { wait: false })
         //   .then((cp) => cp.unref())
