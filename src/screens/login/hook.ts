@@ -1,7 +1,11 @@
 // import * as electron from 'electron';
 import { useState } from 'react';
 import { useSnackbar } from 'notistack';
-import { googleAuthenticated, facebookAuthenticated } from './login-service';
+import {
+  googleAuthenticated,
+  facebookAuthenticated,
+  wechatAuthenticated,
+} from './login-service';
 import { useStores } from '../../contexts/root-context';
 
 export type LoginType = 'Google' | 'Facebook' | 'Wechat';
@@ -69,6 +73,11 @@ export const useLoginLogic = () => {
           .catch(() => onHandleError());
         break;
       case 'Wechat':
+        wechatAuthenticated()
+          .then(({ accessToken, openId }) => {
+            console.log(`access token: ${accessToken}, openid: ${openId}`);
+          })
+          .catch(() => onHandleError());
         break;
       default:
         break;

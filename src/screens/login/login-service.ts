@@ -156,3 +156,70 @@ export const facebookAuthenticated = (): Promise<{ accessToken: string }> => {
     });
   });
 };
+
+export const wechatAuthenticated = (): Promise<{
+  accessToken: string;
+  openId: string;
+}> => {
+  return new Promise((resolve, reject) => {
+    const options = {
+      appId: '',
+      scopes: 'snsapi_login',
+    };
+    const redirectUriPort = 3001;
+    const redirectUri = `http://localhost:${redirectUriPort}`;
+
+    const wechatAuthUrl = `https://open.weixin.qq.com/connect/qrconnect?appid=${options.appId}&redirect_uri=${redirectUri}&response_type=code&scope=snsapi_login&state=STATE#wechat_redirect`;
+
+    const requestListener = async (request: IncomingMessage) => {
+      try {
+        if ((request.url as string).indexOf('code') > -1) {
+          const qs = new Url.URL(request.url as string, redirectUri)
+            .searchParams;
+          const code = qs.get('code') as string;
+          const getTokenUrl = `https://api.weixin.qq.com/sns/oauth2/access_token?appid=${options.appId}&secret=SECRET&code=${code}&grant_type=authorization_code`;
+        }
+      } catch (e) {
+        reject(e);
+      }
+    };
+
+    const server = http.createServer(requestListener).listen(redirectUriPort);
+
+    server.on('listening', () => {
+      const authWindow = new electron.remote.BrowserWindow({
+        show: true,
+        width: 375,
+        height: 668,
+        movable: true,
+        modal: true,
+        webPreferences: {
+          nodeIntegration: true,
+          enableRemoteModule: true,
+        },
+      });
+
+      authWindow.webContents.userAgent =
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0';
+
+      authWindow.loadURL(wechatAuthUrl);
+
+      authWindow.webContents.on('did-redirect-navigation', (_event, newUrl) => {
+        if (newUrl.includes(redirectUri)) {
+          setTimeout(() => {
+            authWindow.close();
+          }, 300);
+        }
+      });
+
+      authWindow.on('close', () => {
+        server?.close();
+      });
+    });
+
+    server.on('error', (err: Error) => {
+      server?.close();
+      reject(err.message);
+    });
+  });
+};
