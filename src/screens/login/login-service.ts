@@ -3,14 +3,16 @@ import http from 'http';
 import Url from 'url';
 import FB from 'fb';
 import * as electron from 'electron';
+import Env from '../../config/env';
 
 export const googleAuthenticated = (): Promise<OAuth2Client> => {
   return new Promise((resolve, reject) => {
     const oAuth2Client = new OAuth2Client(
-      '542556032036-kch832eb37jpm8s9aafjf043jl25gjj7.apps.googleusercontent.com',
-      'cdeRffCHhMvTMek20Eb8KYbY', // 这里要从后台获取
-      'http://localhost:3000'
+      Env.googleClientId,
+      Env.googleClientSecret,
+      Env.googleRedirectUri
     );
+
     const authorizeUrl = oAuth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: 'https://www.googleapis.com/auth/userinfo.profile',
@@ -64,11 +66,6 @@ export const googleAuthenticated = (): Promise<OAuth2Client> => {
         authWindow.on('close', () => {
           server.close();
         });
-
-        // open the browser to the authorize url to start the workflow
-        // open(authorizeUrl, { wait: false })
-        //   .then((cp) => cp.unref())
-        //   .catch(() => {});
       });
   });
 };
