@@ -17,7 +17,7 @@ import { MeetingInfo } from '../join-meeting';
 
 export const MeetingList = () => {
   const history = useHistory();
-  const { dispatch } = useStores();
+  const { dispatch, userStore } = useStores();
 
   const joinMeeting = () => {
     history.push('/JoinMeeting');
@@ -34,6 +34,8 @@ export const MeetingList = () => {
 
   const onCreateAdHocMeetingClicked = async () => {
     const meetingInfo = await createMeetingInternal(MeetingType.adHoc);
+
+    console.log(meetingInfo);
 
     if (meetingInfo) {
       const meetingInfoQuery = queryString.stringify(meetingInfo);
@@ -58,7 +60,7 @@ export const MeetingList = () => {
 
     return {
       meetingId: meetingDto.data.meetingNumber,
-      userName: 'eddy',
+      userName: userStore.userInfo.name,
       connectedWithAudio: true,
       connectedWithVideo: false,
     };
