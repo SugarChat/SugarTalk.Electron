@@ -13,7 +13,6 @@ export default {
       '/meeting/schedule',
       request
     );
-    console.log(response);
 
     return response.data;
   },
