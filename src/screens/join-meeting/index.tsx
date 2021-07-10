@@ -10,6 +10,7 @@ import { useHistory } from 'react-router-dom';
 import queryString from 'query-string';
 import { Header } from '../../components/header';
 import * as styles from './styles';
+import { createMeetingWindow } from '../meeting-util';
 
 export interface MeetingInfo {
   meetingId: string;
@@ -37,24 +38,7 @@ export const JoinMeeting: React.FC = () => {
 
     currentWindow.hide();
 
-    const meetingWindow = new electron.remote.BrowserWindow({
-      show: true,
-      width: 1280,
-      height: 720,
-      movable: true,
-      modal: true,
-      webPreferences: {
-        nodeIntegration: true,
-        enableRemoteModule: true,
-      },
-    });
-    meetingWindow.loadURL(
-      `file://${__dirname}/index.html#/meeting?${meetingInfoQuery}`
-    );
-
-    meetingWindow.once('closed', () => {
-      currentWindow.show();
-    });
+    createMeetingWindow(currentWindow, meetingInfoQuery);
   };
 
   const onBackClick = () => {
