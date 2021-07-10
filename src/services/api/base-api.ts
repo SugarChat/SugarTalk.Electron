@@ -7,7 +7,7 @@ axios.defaults.headers = {
   'Content-Type': 'application/json',
 };
 
-export const api : AxiosInstance = axios.create({
+export const api: AxiosInstance = axios.create({
   baseURL: Env.apiUrl,
   headers: {
     Accept: 'application/json',
@@ -16,22 +16,12 @@ export const api : AxiosInstance = axios.create({
 
 api.interceptors.request.use(
   (request) => {
-    request.headers['Authorization'] = `Bearer ${loadRootStore()?.userStore?.idToken ?? ""}`
+    request.headers['Authorization'] = `Bearer ${
+      loadRootStore()?.userStore?.idToken ?? ''
+    }`;
     return request;
   },
   (error) => {
-    return Promise.reject(error);
-  }
-);
-
-api.interceptors.response.use(
-  (response) => {
-    // Sugartalk has a unified response
-    return response.data;
-  },
-  (error) => {
-    // Any status codes that falls outside the range of 2xx cause this function to trigger
-    // Do something with response error
     return Promise.reject(error);
   }
 );

@@ -262,6 +262,7 @@
     "electron-updater": "^4.3.4",
     "fb": "^2.0.0",
     "google-auth-library": "^7.2.0",
+    "guid-typescript": "^1.0.9",
     "history": "^5.0.0",
     "notistack": "^1.0.9",
     "qs": "^6.10.1",
