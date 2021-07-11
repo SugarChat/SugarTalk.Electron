@@ -16,7 +16,8 @@ export const WebRTC = (props: IWebRTC) => {
 
   const rtcPeerRef = React.useRef<RTCPeerConnection | null>(null);
 
-  const { video, voice, serverRef } = React.useContext(MeetingContext);
+  const { video, voice, serverRef, hasVideo, hasVoice } =
+    React.useContext(MeetingContext);
 
   const createPeerSendonly = async () => {
     const rtcPeer = new RTCPeerConnection();
@@ -26,8 +27,8 @@ export const WebRTC = (props: IWebRTC) => {
     });
 
     const localStream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true,
+      video: true && hasVideo,
+      audio: true && hasVoice,
     });
 
     videoRef.current.srcObject = localStream;

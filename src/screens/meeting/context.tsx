@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import electron from 'electron';
 import Env from '../../config/env';
 import { useStores } from '../../contexts/root-context';
+import { getMediaAccessStatus, getMediaDeviceStatus } from '../../utils/media';
 
 interface IMeetingContextValue {
   video: boolean;
@@ -12,19 +13,25 @@ interface IMeetingContextValue {
   voice: boolean;
   setVoice: React.Dispatch<React.SetStateAction<boolean>>;
   serverRef: React.MutableRefObject<HubConnection | undefined> | undefined;
+  hasVideo: boolean;
+  hasVoice: boolean;
 }
 
 export const MeetingContext = React.createContext<IMeetingContextValue>({
-  video: true,
+  video: false,
   setVideo: () => {},
-  voice: true,
+  voice: false,
   setVoice: () => {},
   serverRef: undefined,
+  hasVideo: false,
+  hasVoice: false,
 });
 
 export const MeetingProvider: React.FC = ({ children }) => {
   const [video, setVideo] = React.useState<boolean>(true);
   const [voice, setVoice] = React.useState<boolean>(true);
+  const [hasVideo, setHasVideo] = React.useState<boolean>(true);
+  const [hasVoice, setHasVoice] = React.useState<boolean>(true);
   const serverRef = React.useRef<HubConnection>();
   const location = useLocation();
   const { userStore } = useStores();
@@ -34,8 +41,21 @@ export const MeetingProvider: React.FC = ({ children }) => {
       parseBooleans: true,
     });
 
-    setVideo(meetingInfo.connectedWithVideo as boolean);
-    setVoice(meetingInfo.connectedWithAudio as boolean);
+    const initMediaDeviceStatus = async () => {
+      const videoDevice = await getMediaDeviceStatus('camera');
+      setHasVideo(videoDevice);
+
+      const voiceDevice = await getMediaDeviceStatus('microphone');
+      setHasVoice(voiceDevice);
+
+      const videoStatus = await getMediaDeviceStatus('camera');
+      setVideo((meetingInfo.connectedWithVideo as boolean) && videoStatus);
+
+      const voiceStatus = await getMediaDeviceStatus('microphone');
+      setVoice((meetingInfo.connectedWithAudio as boolean) && voiceStatus);
+    };
+
+    initMediaDeviceStatus();
 
     const wsUrl = `${Env.apiUrl}meetingHub?username=${meetingInfo.userName}&meetingNumber=${meetingInfo.meetingId}`;
 
@@ -70,6 +90,8 @@ export const MeetingProvider: React.FC = ({ children }) => {
         voice,
         setVoice,
         serverRef,
+        hasVideo,
+        hasVoice,
       }}
     >
       {children && children}

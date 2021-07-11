@@ -45,10 +45,6 @@ const MeetingScreen: React.FC = () => {
     );
   };
 
-  const onCloseMeeting = () => {
-    electron.remote.getCurrentWindow().close();
-  };
-
   const onFullScreen = () => {
     const currentWindow = electron.remote.getCurrentWindow();
     if (currentWindow.fullScreen) {
@@ -93,7 +89,7 @@ const MeetingScreen: React.FC = () => {
           );
         })}
       </Box>
-      <FooterToolbar onCloseMeeting={() => onCloseMeeting()} />
+      <FooterToolbar />
     </PageScreen>
   );
 };
