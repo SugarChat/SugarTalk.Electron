@@ -1,6 +1,7 @@
 {
   "apiUrl": "https://testtalk.yamimeal.io/",
-  "googleClientId": "",
-  "googleClientSecret": "",
-  "googleRedirectUriPort": 3000
+  "googleClientId": "542556032036-kch832eb37jpm8s9aafjf043jl25gjj7.apps.googleusercontent.com",
+  "facebookClientId": "462234011175255",
+  "weChatClientId": "",
+  "redirectUriPort": 3000
 }

@@ -14,6 +14,7 @@ export const settings: CSSProperties = {
   color: '#333',
   width: '25px',
   height: '25px',
+  marginTop: '20px',
 };
 
 export const settingWrapper: CSSProperties = {

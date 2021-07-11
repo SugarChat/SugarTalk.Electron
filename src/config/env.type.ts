@@ -1,6 +1,7 @@
 export interface Env {
   apiUrl: string;
   googleClientId: string;
-  googleClientSecret: string;
-  googleRedirectUriPort: number;
+  facebookClientId: string;
+  weChatClientId: string;
+  redirectUriPort: number;
 }

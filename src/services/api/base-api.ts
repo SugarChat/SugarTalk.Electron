@@ -7,7 +7,7 @@ axios.defaults.headers = {
   'Content-Type': 'application/json',
 };
 
-export const api : AxiosInstance = axios.create({
+export const api: AxiosInstance = axios.create({
   baseURL: Env.apiUrl,
   headers: {
     Accept: 'application/json',
@@ -16,7 +16,9 @@ export const api : AxiosInstance = axios.create({
 
 api.interceptors.request.use(
   (request) => {
-    request.headers['Authorization'] = `Bearer ${loadRootStore()?.userStore?.idToken ?? ""}`
+    request.headers.Authorization = `Bearer ${
+      loadRootStore()?.userStore?.idToken ?? ''
+    }`;
     return request;
   },
   (error) => {

@@ -1,29 +1,25 @@
-import { OAuth2Client } from 'google-auth-library';
 import http, { IncomingMessage } from 'http';
 import Url from 'url';
-import FB from 'fb';
+import * as FB from 'fb-sdk-wrapper';
 import * as electron from 'electron';
 import Env from '../../config/env';
+import Api from '../../services/api/modules/login';
 
-export const googleAuthenticated = (): Promise<OAuth2Client> => {
+export const googleAuthenticated = (): Promise<any> => {
   return new Promise((resolve, reject) => {
-    const googleRedirectUri = `http://localhost:${Env.googleRedirectUriPort}`;
-
-    const oAuth2Client = new OAuth2Client(
-      Env.googleClientId,
-      Env.googleClientSecret,
-      googleRedirectUri
-    );
+    const redirectUri = `http://localhost:${Env.redirectUriPort}`;
 
     const requestListener = async (request: IncomingMessage) => {
       try {
         if ((request.url as string).indexOf('code') > -1) {
-          const qs = new Url.URL(request.url as string, googleRedirectUri)
+          const qs = new Url.URL(request.url as string, redirectUri)
             .searchParams;
           const code = qs.get('code') as string;
-          const tokenResponse = await oAuth2Client.getToken(code);
-          oAuth2Client.setCredentials(tokenResponse.tokens);
-          resolve(oAuth2Client);
+          Api.googleSign(code)
+            .then((res) => {
+              resolve(res.data);
+            })
+            .catch((error) => reject(error));
         }
       } catch (e) {
         reject(e);
@@ -32,14 +28,9 @@ export const googleAuthenticated = (): Promise<OAuth2Client> => {
 
     const server = http
       .createServer(requestListener)
-      .listen(Env.googleRedirectUriPort);
+      .listen(Env.redirectUriPort);
 
     server.on('listening', () => {
-      const authorizeUrl = oAuth2Client.generateAuthUrl({
-        access_type: 'offline',
-        scope: 'https://www.googleapis.com/auth/userinfo.profile',
-      });
-
       const authWindow = new electron.remote.BrowserWindow({
         show: true,
         width: 375,
@@ -51,13 +42,23 @@ export const googleAuthenticated = (): Promise<OAuth2Client> => {
           enableRemoteModule: true,
         },
       });
-
       authWindow.webContents.userAgent =
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0';
-      authWindow.loadURL(authorizeUrl);
+
+      const scope = encodeURIComponent(
+        'https://www.googleapis.com/auth/userinfo.email'
+      );
+
+      authWindow.loadURL(
+        `https://accounts.google.com/o/oauth2/v2/auth?client_id=${
+          Env.googleClientId
+        }&response_type=code&scope=${scope}&redirect_uri=${encodeURIComponent(
+          redirectUri
+        )}&prompt=consent&include_granted_scopes=true`
+      );
 
       authWindow.webContents.on('did-redirect-navigation', (_event, newUrl) => {
-        if (newUrl.includes(googleRedirectUri)) {
+        if (newUrl.includes(redirectUri)) {
           setTimeout(() => {
             authWindow.close();
           }, 300);
@@ -78,14 +79,15 @@ export const googleAuthenticated = (): Promise<OAuth2Client> => {
 
 export const facebookAuthenticated = (): Promise<{ accessToken: string }> => {
   return new Promise((resolve, reject) => {
+    const redirectUri = `https://testshopping.yamimeal.com/index.html`;
     const options = {
-      client_id: '462234011175255',
+      clientId: Env.facebookClientId,
       scopes: 'email',
-      redirect_uri: 'https://www.facebook.com/connect/login_success.html',
+      redirectUri,
     };
 
     const authWindow = new electron.remote.BrowserWindow({
-      show: false,
+      show: true,
       width: 375,
       height: 668,
       movable: true,
@@ -95,13 +97,12 @@ export const facebookAuthenticated = (): Promise<{ accessToken: string }> => {
         enableRemoteModule: true,
       },
     });
-    const facebookAuthURL = `https://www.facebook.com/v3.2/dialog/oauth?client_id=${options.client_id}&redirect_uri=${options.redirect_uri}&response_type=token,granted_scopes&scope=${options.scopes}&display=popup`;
-
+    const facebookAuthURL = `https://www.facebook.com/v3.6/dialog/oauth?client_id=${options.clientId}&redirect_uri=${options.redirectUri}&response_type=token&scope=${options.scopes}&display=popup`;
     authWindow.loadURL(facebookAuthURL);
-    authWindow.webContents.on('did-finish-load', () => {
-      authWindow.show();
-    });
-
+    authWindow.webContents.openDevTools();
+    // authWindow.webContents.on('did-finish-load', () => {
+    //   authWindow.show();
+    // });
     let accessToken = '';
     let error: RegExpExecArray | null = null;
     let closedByUser = true;
@@ -113,40 +114,27 @@ export const facebookAuthenticated = (): Promise<{ accessToken: string }> => {
 
       if (accessToken || error) {
         closedByUser = false;
-        FB.setAccessToken(accessToken);
-        FB.api(
-          '/me',
-          {
-            fields: ['id', 'name', 'picture.width(800).height(800)'],
-          },
-          (res: any) => {
-            authWindow.webContents.executeJavaScript(
-              `document.getElementById("fb-name").innerHTML = " Name: ${res.name}"`
-            );
-            authWindow.webContents.executeJavaScript(
-              `document.getElementById("fb-id").innerHTML = " ID: ${res.id}"`
-            );
-            authWindow.webContents.executeJavaScript(
-              `document.getElementById("fb-pp").src = "${res.picture.data.url}"`
-            );
-          }
-        );
+        FB.api('/me', 'get', {
+          fields: ['id', 'name', 'picture.width(800).height(800)'],
+        })
+          .then((res) => {
+            console.log(res);
+          })
+          .catch(() => {});
         authWindow.close();
       }
     };
 
-    authWindow.webContents.on('will-navigate', (event, url) => handleUrl(url));
-    const filter = {
-      urls: [`${options.redirect_uri}*`],
-    };
-    electron.remote.session.defaultSession.webRequest.onCompleted(
-      filter,
-      (details) => {
-        handleUrl(details.url);
-      }
-    );
+    authWindow.webContents.on('will-redirect', (_event, url) => {
+      setTimeout(() => {
+        console.log(url);
+      }, 1000);
+
+      handleUrl(url);
+    });
 
     authWindow.on('close', () => {
+      FB.logout();
       if (closedByUser) {
         reject(new Error(''));
       } else {

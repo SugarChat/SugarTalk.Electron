@@ -4,7 +4,7 @@ import { api } from '../base-api';
 
 export default {
   scheduleMeeting: async (onError: (error: Error) => void) => {
-    return await api
+    return api
       .post<SugarTalkResponse<MeetingDto>>('/meeting/schedule', {})
       .catch((e) => onError(e));
   },

@@ -2,7 +2,6 @@ import React, { FunctionComponent, useEffect, useMemo } from 'react';
 import { Settings } from '@material-ui/icons';
 import { Avatar } from '@material-ui/core';
 import { useHistory } from 'react-router-dom';
-import { Header } from '../../components/header';
 import logo from './images/logo.jpg';
 import * as styles from './styles';
 import { useLoginLogic } from './hook';
