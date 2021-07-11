@@ -1,5 +1,4 @@
 import { Box } from '@material-ui/core';
-import { HubConnection } from '@microsoft/signalr';
 import React, { useEffect } from 'react';
 import { MeetingContext } from '../../context';
 import * as styles from './styles';
@@ -8,17 +7,16 @@ interface IWebRTC {
   id: string;
   userName: string;
   isSelf: boolean;
-  serverRef: React.MutableRefObject<HubConnection | undefined>;
 }
 
 export const WebRTC = (props: IWebRTC) => {
-  const { id, userName = 'unknown', isSelf, serverRef } = props;
+  const { id, userName = 'unknown', isSelf } = props;
 
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
 
   const rtcPeerRef = React.useRef<RTCPeerConnection | null>(null);
 
-  const { video, voice } = React.useContext(MeetingContext);
+  const { video, voice, serverRef } = React.useContext(MeetingContext);
 
   const createPeerSendonly = async () => {
     const rtcPeer = new RTCPeerConnection();
@@ -98,7 +96,7 @@ export const WebRTC = (props: IWebRTC) => {
         rtcPeerRef?.current?.addIceCandidate(objCandidate);
       }
     });
-  }, []);
+  }, [serverRef?.current]);
 
   useEffect(() => {
     if (isSelf && videoRef.current?.srcObject) {
