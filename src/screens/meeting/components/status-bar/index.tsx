@@ -30,7 +30,7 @@ export const StatusBar = () => {
         xs={6}
         direction="row"
         alignItems="center"
-        justify="flex-start"
+        justifyContent="flex-start"
         spacing={1}
       >
         <Grid item>
@@ -55,7 +55,7 @@ export const StatusBar = () => {
         xs={6}
         direction="row"
         alignItems="center"
-        justify="flex-end"
+        justifyContent="flex-end"
         spacing={1}
       >
         {/* <Grid item>
