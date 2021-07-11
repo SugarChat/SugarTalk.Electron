@@ -3,6 +3,7 @@ import { JoinMeeting } from './join-meeting';
 import { ScheduleMeeting } from './schedule-meeting';
 import { MeetingList } from './meeting-list';
 import { Meeting } from './meeting';
+import { ScreenShareSelector } from './meeting/components/screen-share-selector';
 
 export default [
   { component: Login, path: '/', name: 'Login', auth: false, exact: true },
@@ -31,6 +32,13 @@ export default [
     component: Meeting,
     path: '/Meeting',
     name: 'Meeting',
+    auth: true,
+    exact: true,
+  },
+  {
+    component: ScreenShareSelector,
+    path: '/ScreenSelector',
+    name: 'Select screen',
     auth: true,
     exact: true,
   },

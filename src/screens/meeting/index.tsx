@@ -73,6 +73,21 @@ const MeetingScreen: React.FC = () => {
     }
   };
 
+  const onShareScreenClicked = () => {
+    const meetingWindow = new electron.remote.BrowserWindow({
+      show: true,
+      width: 1080,
+      height: 720,
+      movable: true,
+      modal: true,
+      webPreferences: {
+        nodeIntegration: true,
+        enableRemoteModule: true,
+      },
+    });
+    meetingWindow.loadURL(`file://${__dirname}/index.html#/ScreenSelector`);
+  };
+
   React.useEffect(() => {
     const meetingInfo = queryString.parse(location.search, {
       parseBooleans: true,
@@ -140,7 +155,10 @@ const MeetingScreen: React.FC = () => {
           );
         })}
       </Box>
-      <FooterToolbar onCloseMeeting={() => onCloseMeeting()} />
+      <FooterToolbar
+        onCloseMeeting={() => onCloseMeeting()}
+        onShareScreenClicked={onShareScreenClicked}
+      />
     </PageScreen>
   );
 };
