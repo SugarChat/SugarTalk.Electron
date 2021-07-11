@@ -1,12 +1,13 @@
-import React, { useReducer, FunctionComponent } from 'react';
+import React, { useReducer } from 'react';
 import { IRootStore, IRootStoreAction, BaseStoreInstance } from './setup-store';
 import { RootStoreContextProvider } from './root-context';
+import { Loading } from '../components/loading';
 
 export interface IRootStoreProviderProps {
   rootStoreFromLocalStorage: IRootStore;
 }
 
-export const RootStoreProvider: FunctionComponent<IRootStoreProviderProps> = ({
+export const RootStoreProvider: React.FC<IRootStoreProviderProps> = ({
   rootStoreFromLocalStorage,
   children,
 }) => {
@@ -34,6 +35,7 @@ export const RootStoreProvider: FunctionComponent<IRootStoreProviderProps> = ({
 
   return (
     <RootStoreContextProvider value={{ ...state, dispatch }}>
+      <Loading />
       {children}
     </RootStoreContextProvider>
   );

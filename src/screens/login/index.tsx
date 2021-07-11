@@ -7,6 +7,7 @@ import * as styles from './styles';
 import { useLoginLogic } from './hook';
 import { PageScreen } from '../../components/page-screen/index';
 import { useStores } from '../../contexts/root-context';
+import { Loading } from '../../components/loading/index';
 
 export const Login: FunctionComponent = () => {
   const { userStore } = useStores();

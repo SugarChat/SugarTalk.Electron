@@ -1,4 +1,3 @@
-// import * as electron from 'electron';
 import { useState } from 'react';
 import { useSnackbar } from 'notistack';
 import { googleAuthenticated, facebookAuthenticated } from './login-service';
@@ -17,11 +16,10 @@ export interface ILoginPlatform extends ILoginProps {
 
 export const useLoginLogic = () => {
   const { enqueueSnackbar } = useSnackbar();
-  const [hasLoginError, setLoginError] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const { dispatch } = useStores();
 
   const onHandleError = () => {
-    setLoginError(true);
     enqueueSnackbar('Login fail', {
       variant: 'error',
       autoHideDuration: 6000,
@@ -46,38 +44,40 @@ export const useLoginLogic = () => {
     },
   ];
 
-  const onLogin = ({ loginType, onSuccess }: ILoginProps) => {
-    switch (loginType) {
-      case 'Google':
-        googleAuthenticated()
-          .then((result) => {
-            dispatch({
-              type: 'UpdateIdToken',
-              payload: result?.credentials.id_token,
+  const onLogin = async ({ loginType, onSuccess }: ILoginProps) => {
+    try {
+      window?.loadingOpen();
+      switch (loginType) {
+        case 'Google':
+          await googleAuthenticated()
+            .then((result) => {
+              console.log(result);
+              onSuccess();
+            })
+            .catch(() => {
+              onHandleError();
             });
-            onSuccess();
-          })
-          .catch(() => {
-            onHandleError();
-          });
-        break;
-      case 'Facebook':
-        facebookAuthenticated()
-          .then(({ accessToken }) => {
-            console.log(accessToken);
-          })
-          .catch(() => onHandleError());
-        break;
-      case 'Wechat':
-        break;
-      default:
-        break;
+          break;
+        case 'Facebook':
+          await facebookAuthenticated()
+            .then((result) => {
+              console.log(result);
+            })
+            .catch(() => onHandleError());
+          break;
+        case 'Wechat':
+          break;
+        default:
+          break;
+      }
+    } finally {
+      window?.loadingClose();
     }
   };
 
   return {
     onLogin,
     loginPlatformList,
-    hasLoginError,
+    loading,
   };
 };
