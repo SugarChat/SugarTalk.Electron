@@ -2,6 +2,7 @@ import { Box, Button, Grid, withStyles, ButtonProps } from '@material-ui/core';
 import React from 'react';
 import MicIcon from '@material-ui/icons/Mic';
 import VideocamIcon from '@material-ui/icons/Videocam';
+import ScreenShareIcon from '@material-ui/icons/ScreenShare';
 import MicOffIcon from '@material-ui/icons/MicOff';
 import VideocamOffIcon from '@material-ui/icons/VideocamOff';
 import * as styles from './styles';
@@ -33,12 +34,13 @@ const ToolbarButton = (props: IToolbarButton) => {
 
 interface IFooterToolbar {
   onCloseMeeting: () => void;
+  onShareScreenClicked: () => void;
 }
 
 export const FooterToolbar = (props: IFooterToolbar) => {
   const { video, setVideo, voice, setVoice } = React.useContext(MeetingContext);
 
-  const { onCloseMeeting } = props;
+  const { onCloseMeeting, onShareScreenClicked } = props;
 
   return (
     <Box style={styles.footerToolbarContainer}>
@@ -56,6 +58,13 @@ export const FooterToolbar = (props: IFooterToolbar) => {
               onClick={() => setVideo(!video)}
               text={video ? '关闭视频' : '开启视频'}
               icon={video ? <VideocamIcon /> : <VideocamOffIcon />}
+            />
+          </Grid>
+          <Grid item>
+            <ToolbarButton
+              onClick={onShareScreenClicked}
+              text="共享屏幕"
+              icon={<ScreenShareIcon />}
             />
           </Grid>
         </Grid>
