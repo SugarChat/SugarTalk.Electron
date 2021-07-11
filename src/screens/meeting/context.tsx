@@ -43,16 +43,24 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
     const initMediaDeviceStatus = async () => {
       const videoDevice = await getMediaDeviceStatus('camera');
-      setHasVideo(videoDevice);
-
       const voiceDevice = await getMediaDeviceStatus('microphone');
-      setHasVoice(voiceDevice);
 
-      const videoStatus = await getMediaDeviceStatus('camera');
-      setVideo((meetingInfo.connectedWithVideo as boolean) && videoStatus);
+      const videoAccess = await getMediaAccessStatus('camera');
+      const voiceAccess = await getMediaAccessStatus('microphone');
 
-      const voiceStatus = await getMediaDeviceStatus('microphone');
-      setVoice((meetingInfo.connectedWithAudio as boolean) && voiceStatus);
+      setHasVideo(videoDevice && videoAccess);
+      setHasVoice(voiceDevice && voiceAccess);
+
+      setVideo(
+        (meetingInfo.connectedWithVideo as boolean) &&
+          videoAccess &&
+          videoDevice
+      );
+      setVoice(
+        (meetingInfo.connectedWithAudio as boolean) &&
+          voiceAccess &&
+          voiceDevice
+      );
     };
 
     initMediaDeviceStatus();
