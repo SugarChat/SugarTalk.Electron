@@ -1,6 +1,6 @@
 {
   "name": "electron-react-boilerplate",
-  "productName": "ElectronReact",
+  "productName": "SugarTalk",
   "description": "Electron application boilerplate based on React, React Router, Webpack, React Fast Refresh for rapid application development",
   "scripts": {
     "build": "concurrently \"yarn build:main\" \"yarn build:renderer\"",
@@ -30,8 +30,8 @@
     ]
   },
   "build": {
-    "productName": "ElectronReact",
-    "appId": "org.erb.ElectronReact",
+    "productName": "SugarTalk",
+    "appId": "org.erb.SugarTalk",
     "files": [
       "dist/",
       "node_modules/",
@@ -261,6 +261,7 @@
     "electron-log": "^4.2.4",
     "electron-updater": "^4.3.4",
     "fb-sdk-wrapper": "^1.1.0",
+    "guid-typescript": "^1.0.9",
     "history": "^5.0.0",
     "notistack": "^1.0.9",
     "qs": "^6.10.1",

@@ -1,34 +1,103 @@
 import React from 'react';
 import { useHistory } from 'react-router-dom';
-import { Settings } from '@material-ui/icons';
-import { Button } from '@material-ui/core';
+import { Button, Divider } from '@material-ui/core';
 import Api from '../../services/api';
-import styles from './index.scss';
 import { Header } from '../../components/header';
+import { PageScreen } from '../../components/page-screen';
+import { useStores } from '../../contexts/root-context';
+import queryString from 'query-string';
+import { createMeetingWindow } from '../meeting-util';
+import {
+  MeetingType,
+  ScheduleMeetingCommand,
+} from '../../dtos/schedule-meeting-command';
+import { Guid } from 'guid-typescript';
+import electron from 'electron';
+import { MeetingInfo } from '../join-meeting';
 
 export const MeetingList = () => {
   const history = useHistory();
+  const { dispatch, userStore } = useStores();
 
   const joinMeeting = () => {
     history.push('/JoinMeeting');
   };
 
-  const onScheduleMeetingClicked = async () => {
-    const meetingInfo = await Api.meeting.scheduleMeeting((e) => {});
+  const logout = () => {
+    dispatch({
+      type: 'UpdateIdToken',
+      payload: '',
+    });
+  };
+
+  const onScheduleMeetingClicked = async () => {};
+
+  const onCreateAdHocMeetingClicked = async () => {
+    const meetingInfo = await createMeetingInternal(MeetingType.adHoc);
+
     console.log(meetingInfo);
+
+    if (meetingInfo) {
+      const meetingInfoQuery = queryString.stringify(meetingInfo);
+
+      const currentWindow = electron.remote.getCurrentWindow();
+
+      currentWindow.hide();
+
+      createMeetingWindow(currentWindow, meetingInfoQuery);
+    }
+  };
+
+  const createMeetingInternal = async (
+    meetingType: MeetingType
+  ): Promise<MeetingInfo> => {
+    const scheduleCommand: ScheduleMeetingCommand = {
+      id: Guid.create().toString(),
+      meetingType,
+    };
+
+    const meetingDto = await Api.meeting.scheduleMeeting(scheduleCommand);
+
+    return {
+      meetingId: meetingDto.data.meetingNumber,
+      userName: userStore.userInfo.name,
+      connectedWithAudio: true,
+      connectedWithVideo: false,
+    };
   };
 
   return (
-    <div className={styles.root}>
+    <PageScreen>
       <Header title="SugarTalk" />
-      <div className={styles.settingWrapper}>
-        <Settings style={{ color: '#333', width: '25px', height: '25px' }} />
-      </div>
-      <div className={styles.content}>
-        {/* <Button onClick={() => history.goBack()}>Back</Button> */}
-        <Button onClick={joinMeeting}>加入会议</Button>
-        <Button onClick={onScheduleMeetingClicked}>快速会议</Button>
-      </div>
-    </div>
+      <Button
+        color="primary"
+        variant="contained"
+        onClick={joinMeeting}
+        fullWidth
+        disableElevation
+      >
+        加入会议
+      </Button>
+      <Divider />
+      <Button
+        color="primary"
+        variant="contained"
+        onClick={onCreateAdHocMeetingClicked}
+        fullWidth
+        disableElevation
+      >
+        快速会议
+      </Button>
+      <Divider />
+      <Button
+        color="primary"
+        variant="contained"
+        onClick={logout}
+        fullWidth
+        disableElevation
+      >
+        注销
+      </Button>
+    </PageScreen>
   );
 };
