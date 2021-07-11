@@ -64,14 +64,14 @@ export const FooterToolbar = () => {
         <Grid item container xs={6} justify="flex-start" spacing={1}>
           <Grid item>
             <ToolbarButton
-              onClick={() => toggleVoice()}
+              onClick={toggleVoice}
               text={voice ? '静音' : '解除静音'}
               icon={voice ? <MicIcon /> : <MicOffIcon />}
             />
           </Grid>
           <Grid item>
             <ToolbarButton
-              onClick={() => toggleVideo()}
+              onClick={toggleVideo}
               text={video ? '关闭视频' : '开启视频'}
               icon={video ? <VideocamIcon /> : <VideocamOffIcon />}
             />
@@ -82,7 +82,7 @@ export const FooterToolbar = () => {
             <Button
               variant="outlined"
               color="secondary"
-              onClick={() => onCloseMeeting()}
+              onClick={onCloseMeeting}
             >
               结束会议
             </Button>

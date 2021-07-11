@@ -1,6 +1,5 @@
 import React from 'react';
 import { Box } from '@material-ui/core';
-import electron from 'electron';
 import { PageScreen } from '../../components/page-screen/index';
 import { StatusBar } from './components/status-bar';
 import * as styles from './styles';
@@ -45,15 +44,6 @@ const MeetingScreen: React.FC = () => {
     );
   };
 
-  const onFullScreen = () => {
-    const currentWindow = electron.remote.getCurrentWindow();
-    if (currentWindow.fullScreen) {
-      currentWindow.setFullScreen(false);
-    } else {
-      currentWindow.setFullScreen(true);
-    }
-  };
-
   React.useEffect(() => {
     serverRef?.current?.on('SetLocalUser', (localUser: IUser) => {
       createUserSession(localUser, true);
@@ -76,7 +66,7 @@ const MeetingScreen: React.FC = () => {
 
   return (
     <PageScreen style={styles.root}>
-      <StatusBar onFullScreen={() => onFullScreen()} />
+      <StatusBar />
       <Box style={styles.webRTCContainer}>
         {userSessions.map((userSession, key) => {
           return (
