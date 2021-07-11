@@ -7,7 +7,7 @@ import {
 import { desktopCapturer } from 'electron';
 import { DesktopCapturerSource } from 'electron/main';
 import React, { useEffect, useState } from 'react';
-import { PageScreen } from '../../../../components/page-screen';
+import { PageScreen } from '../../components/page-screen';
 import * as styles from './styles';
 
 interface ScreenData {
