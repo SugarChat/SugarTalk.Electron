@@ -2,6 +2,7 @@ import { Box, Button, Grid, withStyles, ButtonProps } from '@material-ui/core';
 import React from 'react';
 import MicIcon from '@material-ui/icons/Mic';
 import VideocamIcon from '@material-ui/icons/Videocam';
+import ScreenShareIcon from '@material-ui/icons/ScreenShare';
 import MicOffIcon from '@material-ui/icons/MicOff';
 import VideocamOffIcon from '@material-ui/icons/VideocamOff';
 import electron from 'electron';
@@ -57,6 +58,21 @@ export const FooterToolbar = () => {
   const onCloseMeeting = () => {
     electron.remote.getCurrentWindow().close();
   };
+  
+  const onShareScreenClicked = () => {
+    const meetingWindow = new electron.remote.BrowserWindow({
+      show: true,
+      width: 1080,
+      height: 720,
+      movable: true,
+      modal: true,
+      webPreferences: {
+        nodeIntegration: true,
+        enableRemoteModule: true,
+      },
+    });
+    meetingWindow.loadURL(`file://${__dirname}/index.html#/ScreenSelector`);
+  };
 
   return (
     <Box style={styles.footerToolbarContainer}>
@@ -74,6 +90,13 @@ export const FooterToolbar = () => {
               onClick={toggleVideo}
               text={video ? '关闭视频' : '开启视频'}
               icon={video ? <VideocamIcon /> : <VideocamOffIcon />}
+            />
+          </Grid>
+          <Grid item>
+            <ToolbarButton
+              onClick={onShareScreenClicked}
+              text="共享屏幕"
+              icon={<ScreenShareIcon />}
             />
           </Grid>
         </Grid>
