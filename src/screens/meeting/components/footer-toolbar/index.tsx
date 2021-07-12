@@ -58,7 +58,7 @@ export const FooterToolbar = () => {
   const onCloseMeeting = () => {
     electron.remote.getCurrentWindow().close();
   };
-  
+
   const onShareScreenClicked = () => {
     const meetingWindow = new electron.remote.BrowserWindow({
       show: true,
