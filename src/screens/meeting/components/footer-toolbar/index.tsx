@@ -5,8 +5,10 @@ import VideocamIcon from '@material-ui/icons/Videocam';
 import ScreenShareIcon from '@material-ui/icons/ScreenShare';
 import MicOffIcon from '@material-ui/icons/MicOff';
 import VideocamOffIcon from '@material-ui/icons/VideocamOff';
+import electron from 'electron';
 import * as styles from './styles';
 import { MeetingContext } from '../../context';
+import { getMediaAccessStatus } from '../../../../utils/media';
 
 interface IToolbarButton extends ButtonProps {
   text: string;
@@ -32,15 +34,45 @@ const ToolbarButton = (props: IToolbarButton) => {
   );
 };
 
-interface IFooterToolbar {
-  onCloseMeeting: () => void;
-  onShareScreenClicked: () => void;
-}
-
-export const FooterToolbar = (props: IFooterToolbar) => {
+export const FooterToolbar = () => {
   const { video, setVideo, voice, setVoice } = React.useContext(MeetingContext);
 
-  const { onCloseMeeting, onShareScreenClicked } = props;
+  const toggleVideo = async () => {
+    if (video) {
+      setVideo(false);
+    } else {
+      const status = await getMediaAccessStatus('camera', true);
+      setVideo(status);
+    }
+  };
+
+  const toggleVoice = async () => {
+    if (voice) {
+      setVoice(false);
+    } else {
+      const status = await getMediaAccessStatus('microphone', true);
+      setVoice(status);
+    }
+  };
+
+  const onCloseMeeting = () => {
+    electron.remote.getCurrentWindow().close();
+  };
+
+  const onShareScreenClicked = () => {
+    const meetingWindow = new electron.remote.BrowserWindow({
+      show: true,
+      width: 1080,
+      height: 720,
+      movable: true,
+      modal: true,
+      webPreferences: {
+        nodeIntegration: true,
+        enableRemoteModule: true,
+      },
+    });
+    meetingWindow.loadURL(`file://${__dirname}/index.html#/ScreenSelector`);
+  };
 
   return (
     <Box style={styles.footerToolbarContainer}>
@@ -48,14 +80,14 @@ export const FooterToolbar = (props: IFooterToolbar) => {
         <Grid item container xs={6} justify="flex-start" spacing={1}>
           <Grid item>
             <ToolbarButton
-              onClick={() => setVoice(!voice)}
+              onClick={toggleVoice}
               text={voice ? '静音' : '解除静音'}
               icon={voice ? <MicIcon /> : <MicOffIcon />}
             />
           </Grid>
           <Grid item>
             <ToolbarButton
-              onClick={() => setVideo(!video)}
+              onClick={toggleVideo}
               text={video ? '关闭视频' : '开启视频'}
               icon={video ? <VideocamIcon /> : <VideocamOffIcon />}
             />
@@ -73,7 +105,7 @@ export const FooterToolbar = (props: IFooterToolbar) => {
             <Button
               variant="outlined"
               color="secondary"
-              onClick={() => onCloseMeeting()}
+              onClick={onCloseMeeting}
             >
               结束会议
             </Button>

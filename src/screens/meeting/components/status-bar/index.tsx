@@ -4,14 +4,18 @@ import InfoIcon from '@material-ui/icons/Info';
 import SignalCellularAltIcon from '@material-ui/icons/SignalCellularAlt';
 import VerifiedUserIcon from '@material-ui/icons/VerifiedUser';
 import FullscreenIcon from '@material-ui/icons/Fullscreen';
+import electron from 'electron';
 import * as styles from './styles';
 
-interface IStatusBar {
-  onFullScreen: () => void;
-}
-
-export const StatusBar = (props: IStatusBar) => {
-  const { onFullScreen } = props;
+export const StatusBar = () => {
+  const onFullScreen = () => {
+    const currentWindow = electron.remote.getCurrentWindow();
+    if (currentWindow.fullScreen) {
+      currentWindow.setFullScreen(false);
+    } else {
+      currentWindow.setFullScreen(true);
+    }
+  };
 
   return (
     <Grid
@@ -26,7 +30,7 @@ export const StatusBar = (props: IStatusBar) => {
         xs={6}
         direction="row"
         alignItems="center"
-        justify="flex-start"
+        justifyContent="flex-start"
         spacing={1}
       >
         <Grid item>
@@ -51,14 +55,14 @@ export const StatusBar = (props: IStatusBar) => {
         xs={6}
         direction="row"
         alignItems="center"
-        justify="flex-end"
+        justifyContent="flex-end"
         spacing={1}
       >
         {/* <Grid item>
           <Box style={styles.statusBarTimer}>25:49:25</Box>
         </Grid> */}
         <Grid item>
-          <IconButton size="small" onClick={() => onFullScreen()}>
+          <IconButton size="small" onClick={onFullScreen}>
             <FullscreenIcon fontSize="small" htmlColor="#76787d" />
           </IconButton>
         </Grid>
