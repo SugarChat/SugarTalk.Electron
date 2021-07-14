@@ -8,7 +8,7 @@ import VideocamOffIcon from '@material-ui/icons/VideocamOff';
 import electron from 'electron';
 import * as styles from './styles';
 import { MeetingContext } from '../../context';
-import { getMediaDeviceAccess } from '../../../../utils/media';
+import { getMediaDeviceAccessAndStatus } from '../../../../utils/media';
 
 interface IToolbarButton extends ButtonProps {
   text: string;
@@ -41,7 +41,7 @@ export const FooterToolbar = () => {
     if (video) {
       setVideo(false);
     } else {
-      const status = await getMediaDeviceAccess('camera');
+      const status = await getMediaDeviceAccessAndStatus('camera', true);
       setVideo(status);
     }
   };
@@ -50,7 +50,7 @@ export const FooterToolbar = () => {
     if (audio) {
       setAudio(false);
     } else {
-      const status = await getMediaDeviceAccess('microphone');
+      const status = await getMediaDeviceAccessAndStatus('microphone', true);
       setAudio(status);
     }
   };

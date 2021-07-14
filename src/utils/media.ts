@@ -69,7 +69,6 @@ export const showRequestMediaAccessDialog = (
  * 获取媒体设备授权状态
  *
  * @param mediaType
- * @param requestAccess
  * @returns
  */
 export const getMediaDeviceAccess = async (
@@ -86,6 +85,31 @@ export const getMediaDeviceAccess = async (
 
   if (platform === 'mac') {
     return electron.remote.systemPreferences.askForMediaAccess(mediaType);
+  }
+
+  return false;
+};
+
+/**
+ * 获取媒体设备授权状态和设备状态
+ *
+ * @param mediaType
+ * @param requestAccess
+ * @returns
+ */
+export const getMediaDeviceAccessAndStatus = async (
+  mediaType: 'microphone' | 'camera',
+  requestAccess = false
+): Promise<boolean> => {
+  const deviceAccess = await getMediaDeviceAccess(mediaType);
+  const deviceStatus = await getMediaDeviceStatus(mediaType);
+
+  if (deviceAccess && deviceStatus) {
+    return true;
+  }
+
+  if (requestAccess) {
+    showRequestMediaAccessDialog(mediaType);
   }
 
   return false;

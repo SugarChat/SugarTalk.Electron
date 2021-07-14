@@ -6,8 +6,7 @@ import electron from 'electron';
 import Env from '../../config/env';
 import { useStores } from '../../contexts/root-context';
 import {
-  getMediaDeviceAccess,
-  getMediaDeviceStatus,
+  getMediaDeviceAccessAndStatus,
   showRequestMediaAccessDialog,
 } from '../../utils/media';
 
@@ -48,27 +47,19 @@ export const MeetingProvider: React.FC = ({ children }) => {
     console.log(meetingInfo);
 
     const initMediaDeviceStatus = async () => {
-      const videoDeviceStatus =
-        (await getMediaDeviceStatus('camera')) &&
-        (await getMediaDeviceAccess('camera'));
-      const audioDeviceStatus =
-        (await getMediaDeviceStatus('microphone')) &&
-        (await getMediaDeviceAccess('microphone'));
+      const videoStatus = await getMediaDeviceAccessAndStatus('camera');
+      const audioStatus = await getMediaDeviceAccessAndStatus('microphone');
 
-      if (videoDeviceStatus === false && audioDeviceStatus === false) {
+      if (videoStatus === false && audioStatus === false) {
         showRequestMediaAccessDialog();
         electron.remote.getCurrentWindow().close();
       }
 
-      setHasVideo(videoDeviceStatus);
-      setHasAudio(audioDeviceStatus);
+      setHasVideo(videoStatus);
+      setHasAudio(audioStatus);
 
-      setVideo(
-        (meetingInfo.connectedWithVideo as boolean) && videoDeviceStatus
-      );
-      setAudio(
-        (meetingInfo.connectedWithAudio as boolean) && audioDeviceStatus
-      );
+      setVideo((meetingInfo.connectedWithVideo as boolean) && videoStatus);
+      setAudio((meetingInfo.connectedWithAudio as boolean) && audioStatus);
     };
 
     initMediaDeviceStatus();
