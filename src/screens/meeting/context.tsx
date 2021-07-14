@@ -10,6 +10,13 @@ import {
   showRequestMediaAccessDialog,
 } from '../../utils/media';
 
+export interface IMeetingInfo {
+  meetingId: string;
+  userName: string;
+  connectedWithAudio: boolean;
+  connectedWithVideo: boolean;
+}
+
 interface IMeetingContextValue {
   video: boolean;
   setVideo: React.Dispatch<React.SetStateAction<boolean>>;
@@ -18,6 +25,7 @@ interface IMeetingContextValue {
   serverRef: React.MutableRefObject<HubConnection | undefined> | undefined;
   hasVideo: boolean;
   hasAudio: boolean;
+  meetingNumber: string;
 }
 
 export const MeetingContext = React.createContext<IMeetingContextValue>({
@@ -28,6 +36,7 @@ export const MeetingContext = React.createContext<IMeetingContextValue>({
   serverRef: undefined,
   hasVideo: false,
   hasAudio: false,
+  meetingNumber: '',
 });
 
 export const MeetingProvider: React.FC = ({ children }) => {
@@ -35,6 +44,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const [audio, setAudio] = React.useState<boolean>(true);
   const [hasVideo, setHasVideo] = React.useState<boolean>(true);
   const [hasAudio, setHasAudio] = React.useState<boolean>(true);
+  const [meetingNumber, setMeetingNumber] = React.useState<string>('');
   const serverRef = React.useRef<HubConnection>();
   const location = useLocation();
   const { userStore } = useStores();
@@ -42,9 +52,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
   React.useEffect(() => {
     const meetingInfo = queryString.parse(location.search, {
       parseBooleans: true,
-    });
-
-    console.log(meetingInfo);
+    }) as unknown as IMeetingInfo;
 
     const initMediaDeviceStatus = async () => {
       const videoStatus = await getMediaDeviceAccessAndStatus('camera');
@@ -62,7 +70,11 @@ export const MeetingProvider: React.FC = ({ children }) => {
       setAudio((meetingInfo.connectedWithAudio as boolean) && audioStatus);
     };
 
+    console.log(meetingInfo);
+
     initMediaDeviceStatus();
+
+    setMeetingNumber(meetingInfo.meetingId);
 
     const wsUrl = `${Env.apiUrl}meetingHub?username=${meetingInfo.userName}&meetingNumber=${meetingInfo.meetingId}`;
 
@@ -99,6 +111,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
         serverRef,
         hasVideo,
         hasAudio,
+        meetingNumber,
       }}
     >
       {children && children}
