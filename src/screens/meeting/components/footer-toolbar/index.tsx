@@ -8,7 +8,7 @@ import VideocamOffIcon from '@material-ui/icons/VideocamOff';
 import electron from 'electron';
 import * as styles from './styles';
 import { MeetingContext } from '../../context';
-import { getMediaAccessStatus } from '../../../../utils/media';
+import { getMediaDeviceAccess } from '../../../../utils/media';
 
 interface IToolbarButton extends ButtonProps {
   text: string;
@@ -26,7 +26,7 @@ const ToolbarButton = (props: IToolbarButton) => {
 
   return (
     <CButton size="small" {...rest}>
-      <Grid container direction="column" justify="center">
+      <Grid container direction="column" justifyContent="center">
         <Grid item>{icon}</Grid>
         <Grid item>{text}</Grid>
       </Grid>
@@ -35,23 +35,23 @@ const ToolbarButton = (props: IToolbarButton) => {
 };
 
 export const FooterToolbar = () => {
-  const { video, setVideo, voice, setVoice } = React.useContext(MeetingContext);
+  const { video, setVideo, audio, setAudio } = React.useContext(MeetingContext);
 
   const toggleVideo = async () => {
     if (video) {
       setVideo(false);
     } else {
-      const status = await getMediaAccessStatus('camera', true);
+      const status = await getMediaDeviceAccess('camera');
       setVideo(status);
     }
   };
 
   const toggleVoice = async () => {
-    if (voice) {
-      setVoice(false);
+    if (audio) {
+      setAudio(false);
     } else {
-      const status = await getMediaAccessStatus('microphone', true);
-      setVoice(status);
+      const status = await getMediaDeviceAccess('microphone');
+      setAudio(status);
     }
   };
 
@@ -77,12 +77,12 @@ export const FooterToolbar = () => {
   return (
     <Box style={styles.footerToolbarContainer}>
       <Grid container direction="row">
-        <Grid item container xs={6} justify="flex-start" spacing={1}>
+        <Grid item container xs={6} justifyContent="flex-start" spacing={1}>
           <Grid item>
             <ToolbarButton
               onClick={toggleVoice}
-              text={voice ? '静音' : '解除静音'}
-              icon={voice ? <MicIcon /> : <MicOffIcon />}
+              text={audio ? '静音' : '解除静音'}
+              icon={audio ? <MicIcon /> : <MicOffIcon />}
             />
           </Grid>
           <Grid item>
@@ -100,7 +100,7 @@ export const FooterToolbar = () => {
             />
           </Grid>
         </Grid>
-        <Grid item container xs={6} justify="flex-end" spacing={3}>
+        <Grid item container xs={6} justifyContent="flex-end" spacing={3}>
           <Grid item>
             <Button
               variant="outlined"

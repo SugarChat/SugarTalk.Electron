@@ -5,33 +5,37 @@ import { useLocation } from 'react-router-dom';
 import electron from 'electron';
 import Env from '../../config/env';
 import { useStores } from '../../contexts/root-context';
-import { getMediaAccessStatus, getMediaDeviceStatus } from '../../utils/media';
+import {
+  getMediaDeviceAccess,
+  getMediaDeviceStatus,
+  showRequestMediaAccessDialog,
+} from '../../utils/media';
 
 interface IMeetingContextValue {
   video: boolean;
   setVideo: React.Dispatch<React.SetStateAction<boolean>>;
-  voice: boolean;
-  setVoice: React.Dispatch<React.SetStateAction<boolean>>;
+  audio: boolean;
+  setAudio: React.Dispatch<React.SetStateAction<boolean>>;
   serverRef: React.MutableRefObject<HubConnection | undefined> | undefined;
   hasVideo: boolean;
-  hasVoice: boolean;
+  hasAudio: boolean;
 }
 
 export const MeetingContext = React.createContext<IMeetingContextValue>({
   video: false,
   setVideo: () => {},
-  voice: false,
-  setVoice: () => {},
+  audio: false,
+  setAudio: () => {},
   serverRef: undefined,
   hasVideo: false,
-  hasVoice: false,
+  hasAudio: false,
 });
 
 export const MeetingProvider: React.FC = ({ children }) => {
   const [video, setVideo] = React.useState<boolean>(true);
-  const [voice, setVoice] = React.useState<boolean>(true);
+  const [audio, setAudio] = React.useState<boolean>(true);
   const [hasVideo, setHasVideo] = React.useState<boolean>(true);
-  const [hasVoice, setHasVoice] = React.useState<boolean>(true);
+  const [hasAudio, setHasAudio] = React.useState<boolean>(true);
   const serverRef = React.useRef<HubConnection>();
   const location = useLocation();
   const { userStore } = useStores();
@@ -41,25 +45,29 @@ export const MeetingProvider: React.FC = ({ children }) => {
       parseBooleans: true,
     });
 
+    console.log(meetingInfo);
+
     const initMediaDeviceStatus = async () => {
-      const videoDevice = await getMediaDeviceStatus('camera');
-      const voiceDevice = await getMediaDeviceStatus('microphone');
+      const videoDeviceStatus =
+        (await getMediaDeviceStatus('camera')) &&
+        (await getMediaDeviceAccess('camera'));
+      const audioDeviceStatus =
+        (await getMediaDeviceStatus('microphone')) &&
+        (await getMediaDeviceAccess('microphone'));
 
-      const videoAccess = await getMediaAccessStatus('camera');
-      const voiceAccess = await getMediaAccessStatus('microphone');
+      if (videoDeviceStatus === false && audioDeviceStatus === false) {
+        showRequestMediaAccessDialog();
+        electron.remote.getCurrentWindow().close();
+      }
 
-      setHasVideo(videoDevice && videoAccess);
-      setHasVoice(voiceDevice && voiceAccess);
+      setHasVideo(videoDeviceStatus);
+      setHasAudio(audioDeviceStatus);
 
       setVideo(
-        (meetingInfo.connectedWithVideo as boolean) &&
-          videoAccess &&
-          videoDevice
+        (meetingInfo.connectedWithVideo as boolean) && videoDeviceStatus
       );
-      setVoice(
-        (meetingInfo.connectedWithAudio as boolean) &&
-          voiceAccess &&
-          voiceDevice
+      setAudio(
+        (meetingInfo.connectedWithAudio as boolean) && audioDeviceStatus
       );
     };
 
@@ -95,11 +103,11 @@ export const MeetingProvider: React.FC = ({ children }) => {
       value={{
         video,
         setVideo,
-        voice,
-        setVoice,
+        audio,
+        setAudio,
         serverRef,
         hasVideo,
-        hasVoice,
+        hasAudio,
       }}
     >
       {children && children}
