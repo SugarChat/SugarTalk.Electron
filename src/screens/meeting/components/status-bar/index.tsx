@@ -6,8 +6,21 @@ import VerifiedUserIcon from '@material-ui/icons/VerifiedUser';
 import FullscreenIcon from '@material-ui/icons/Fullscreen';
 import electron from 'electron';
 import * as styles from './styles';
+import { MeetingContext } from '../../context';
+import { secondsToDateFormat } from '../../../../utils/datetime';
 
 export const StatusBar = () => {
+  const { meetingNumber } = React.useContext(MeetingContext);
+  const [duration, setDuration] = React.useState<number>(0);
+
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setDuration((currentDuration: number) => currentDuration + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const onFullScreen = () => {
     const currentWindow = electron.remote.getCurrentWindow();
     if (currentWindow.fullScreen) {
@@ -58,9 +71,14 @@ export const StatusBar = () => {
         justifyContent="flex-end"
         spacing={1}
       >
-        {/* <Grid item>
-          <Box style={styles.statusBarTimer}>25:49:25</Box>
-        </Grid> */}
+        <Grid item>
+          <Box style={styles.roomNumber}>会议号: {meetingNumber}</Box>
+        </Grid>
+        <Grid item>
+          <Box style={styles.statusBarTimer}>
+            {secondsToDateFormat(duration)}
+          </Box>
+        </Grid>
         <Grid item>
           <IconButton size="small" onClick={onFullScreen}>
             <FullscreenIcon fontSize="small" htmlColor="#76787d" />

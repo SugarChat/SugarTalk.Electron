@@ -12,11 +12,13 @@ interface IWebRTC {
 export const WebRTC = (props: IWebRTC) => {
   const { id, userName = 'unknown', isSelf } = props;
 
-  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const videoRef = React.useRef<any>();
 
-  const rtcPeerRef = React.useRef<RTCPeerConnection | null>(null);
+  const audioRef = React.useRef<any>();
 
-  const { video, voice, serverRef, hasVideo, hasVoice } =
+  const rtcPeerRef = React.useRef<RTCPeerConnection>();
+
+  const { video, audio, serverRef, hasVideo, hasAudio } =
     React.useContext(MeetingContext);
 
   const createPeerSendonly = async () => {
@@ -28,7 +30,7 @@ export const WebRTC = (props: IWebRTC) => {
 
     const localStream = await navigator.mediaDevices.getUserMedia({
       video: true && hasVideo,
-      audio: true && hasVoice,
+      audio: true && hasAudio,
     });
 
     videoRef.current.srcObject = localStream;
@@ -36,7 +38,7 @@ export const WebRTC = (props: IWebRTC) => {
     localStream.getTracks().forEach((track: MediaStreamTrack) => {
       rtcPeer.addTrack(track, localStream);
       if (track.kind === 'audio') {
-        track.enabled = voice;
+        track.enabled = audio;
       } else if (track.kind === 'video') {
         track.enabled = video;
       }
@@ -48,9 +50,10 @@ export const WebRTC = (props: IWebRTC) => {
     });
 
     rtcPeer.setLocalDescription(offer);
-    serverRef?.current?.invoke('ProcessOfferAsync', id, offer.sdp);
 
     rtcPeerRef.current = rtcPeer;
+
+    serverRef?.current?.invoke('ProcessOfferAsync', id, offer.sdp);
   };
 
   const createPeerRecvonly = async () => {
@@ -58,6 +61,7 @@ export const WebRTC = (props: IWebRTC) => {
 
     rtcPeer.addEventListener('addstream', (e: any) => {
       videoRef.current.srcObject = e.stream;
+      audioRef.current.srcObject = e.stream;
     });
 
     rtcPeer.addEventListener('icecandidate', (candidate) => {
@@ -69,11 +73,11 @@ export const WebRTC = (props: IWebRTC) => {
       offerToReceiveVideo: true,
     });
 
-    serverRef?.current?.invoke('ProcessOfferAsync', id, offer.sdp);
-
     rtcPeer.setLocalDescription(offer);
 
     rtcPeerRef.current = rtcPeer;
+
+    serverRef?.current?.invoke('ProcessOfferAsync', id, offer.sdp);
   };
 
   React.useEffect(() => {
@@ -85,7 +89,7 @@ export const WebRTC = (props: IWebRTC) => {
 
     serverRef?.current?.on('ProcessAnswer', (connectionId, answerSDP) => {
       if (id === connectionId) {
-        rtcPeerRef?.current?.setRemoteDescription(
+        rtcPeerRef.current?.setRemoteDescription(
           new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
         );
       }
@@ -94,7 +98,7 @@ export const WebRTC = (props: IWebRTC) => {
     serverRef?.current?.on('AddCandidate', (connectionId, candidate) => {
       if (id === connectionId) {
         const objCandidate = JSON.parse(candidate);
-        rtcPeerRef?.current?.addIceCandidate(objCandidate);
+        rtcPeerRef.current?.addIceCandidate(objCandidate);
       }
     });
   }, [serverRef?.current]);
@@ -104,10 +108,10 @@ export const WebRTC = (props: IWebRTC) => {
       videoRef.current.srcObject
         .getAudioTracks()
         .forEach((track: MediaStreamTrack) => {
-          track.enabled = voice;
+          track.enabled = audio;
         });
     }
-  }, [voice]);
+  }, [audio]);
 
   useEffect(() => {
     if (isSelf && videoRef.current?.srcObject) {
@@ -130,6 +134,7 @@ export const WebRTC = (props: IWebRTC) => {
         style={styles.video}
         muted={isSelf}
       />
+      {!isSelf && <audio ref={audioRef} autoPlay playsInline muted={isSelf} />}
       <Box component="div" style={styles.userName}>
         {userName}
       </Box>

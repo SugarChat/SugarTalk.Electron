@@ -15,4 +15,15 @@ export const statusBarTimer: CSSProperties = {
   userSelect: 'none',
   backgroundColor: '#edeff2',
   boxSizing: 'border-box',
+  width: 80,
+  textAlign: 'center',
+};
+
+export const roomNumber: CSSProperties = {
+  border: '1px solid #dadcdf',
+  padding: '3px 8px',
+  fontSize: '12px',
+  color: '#000',
+  backgroundColor: '#edeff2',
+  boxSizing: 'border-box',
 };
