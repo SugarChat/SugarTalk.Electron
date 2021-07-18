@@ -260,7 +260,6 @@
     "electron-debug": "^3.1.0",
     "electron-log": "^4.2.4",
     "electron-updater": "^4.3.4",
-    "fb-sdk-wrapper": "^1.1.0",
     "guid-typescript": "^1.0.9",
     "history": "^5.0.0",
     "notistack": "^1.0.9",
