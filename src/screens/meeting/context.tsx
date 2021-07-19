@@ -89,15 +89,13 @@ export const MeetingProvider: React.FC = ({ children }) => {
     const connectToServer = async () => {
       try {
         await conn.start();
-        console.log('SignalR Connected.');
+        setServerConnection(conn);
       } catch (err) {
         if (err.statusCode === 401) {
           alert('Unauthorized.');
           electron.remote.getCurrentWindow().close();
         }
       }
-
-      setServerConnection(conn);
     };
 
     initMediaDeviceStatus();
@@ -106,6 +104,8 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
     console.log('----about to reconnect------');
     const wsUrl = `${Env.apiUrl}meetingHub?username=${meetingInfo.userName}&meetingNumber=${meetingInfo.meetingId}`;
+
+    console.log(serverConnection);
 
     const conn = new HubConnectionBuilder()
       .withUrl(wsUrl, { accessTokenFactory: () => userStore.idToken })

@@ -12,7 +12,7 @@ interface IWebRTC {
 }
 
 export const WebRTC = (props: IWebRTC) => {
-  const { userName = 'unknown', isSelf } = props;
+  const { id, userName = 'unknown', isSelf } = props;
 
   const videoRef = React.useRef<any>();
 
@@ -53,7 +53,7 @@ export const WebRTC = (props: IWebRTC) => {
       .getAudioTracks()
       .forEach((track: MediaStreamTrack) => {
         rtcPeer.addTrack(track, sendOnlyLocalStream.current as MediaStream);
-        track.enabled = cameraEnabled;
+        track.enabled = microphoneEnabled;
       });
 
     if (props.sharingScreenId) {
@@ -114,11 +114,7 @@ export const WebRTC = (props: IWebRTC) => {
     });
 
     rtcPeer.addEventListener('icecandidate', (candidate) => {
-      serverConnection?.invoke(
-        'ProcessCandidateAsync',
-        serverConnection?.connectionId,
-        candidate
-      );
+      serverConnection?.invoke('ProcessCandidateAsync', id, candidate);
     });
 
     const offer = await rtcPeer.createOffer({
@@ -130,11 +126,7 @@ export const WebRTC = (props: IWebRTC) => {
 
     rtcPeerRef.current = rtcPeer;
 
-    serverConnection?.invoke(
-      'ProcessOfferAsync',
-      serverConnection?.connectionId,
-      offer.sdp
-    );
+    serverConnection?.invoke('ProcessOfferAsync', id, offer.sdp);
 
     console.log(
       `process offer for revc connection ${serverConnection?.connectionId}`
@@ -172,8 +164,8 @@ export const WebRTC = (props: IWebRTC) => {
   }, [serverConnection]);
 
   useEffect(() => {
-    if (isSelf && videoRef.current?.srcObject) {
-      videoRef.current.srcObject
+    if (isSelf && audioRef.current?.srcObject) {
+      audioRef.current.srcObject
         .getAudioTracks()
         .forEach((track: MediaStreamTrack) => {
           track.enabled = microphoneEnabled;
@@ -202,7 +194,7 @@ export const WebRTC = (props: IWebRTC) => {
         style={styles.video}
         muted={isSelf}
       />
-      {!isSelf && <audio ref={audioRef} autoPlay playsInline muted={isSelf} />}
+      <audio ref={audioRef} autoPlay muted={isSelf} />
       <Box component="div" style={styles.userName}>
         {userName}
       </Box>
