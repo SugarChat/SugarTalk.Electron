@@ -29,14 +29,14 @@ export const googleAuthenticated = (): Promise<any> => {
       'https://www.googleapis.com/auth/userinfo.email'
     );
 
-    const redirectUri = 'https://testmerchant.yamimeal.com';
+    const redirectUri = 'http://localhost:3000';
 
     authWindow.loadURL(
       `https://accounts.google.com/o/oauth2/v2/auth?client_id=${
         Env.googleClientId
       }&response_type=code&scope=${scope}&redirect_uri=${encodeURIComponent(
-        'https://testmerchant.yamimeal.com'
-      )}&prompt=consent&include_granted_scopes=true`
+        redirectUri
+      )}&include_granted_scopes=true&flowName=GeneralOAuthFlow`
     );
 
     authWindow.webContents.on('did-redirect-navigation', (_event, newUrl) => {
@@ -50,7 +50,7 @@ export const googleAuthenticated = (): Promise<any> => {
         if (url.indexOf('code') > -1) {
           const qs = new Url.URL(url, redirectUri).searchParams;
           const code = qs.get('code') as string;
-          Api.googleSign(code)
+          Api.getGoogleToken(code, redirectUri)
             .then((res) => {
               resolve(res.data);
             })

@@ -2,17 +2,8 @@ import { useState } from 'react';
 import { useSnackbar } from 'notistack';
 import { googleAuthenticated, facebookAuthenticated } from './login-service';
 import { useStores } from '../../contexts/root-context';
-
-export type LoginType = 'Google' | 'Facebook' | 'Wechat';
-
-export interface ILoginProps {
-  loginType: LoginType;
-  onSuccess: () => void;
-}
-
-export interface ILoginPlatform extends ILoginProps {
-  imageSrc: string;
-}
+import Api from '../../services/api/modules/login';
+import { IGoogleAccessToken, ILoginProps, ILoginPlatform } from './type';
 
 export const useLoginLogic = () => {
   const { enqueueSnackbar } = useSnackbar();
@@ -35,7 +26,12 @@ export const useLoginLogic = () => {
     {
       loginType: 'Google',
       imageSrc: '../assets/login/google.png',
-      onSuccess: () => {},
+      onSuccess: async () => {
+        const { code, data } = await Api.sign();
+        if (code === 20000) {
+          dispatch({ type: 'UpdateUserInfo', payload: data });
+        }
+      },
     },
     {
       loginType: 'Facebook',
@@ -50,8 +46,8 @@ export const useLoginLogic = () => {
       switch (loginType) {
         case 'Google':
           await googleAuthenticated()
-            .then((result) => {
-              console.log(result);
+            .then(({ accessToken }: { accessToken: IGoogleAccessToken }) => {
+              dispatch({ type: 'UpdateIdToken', payload: accessToken.idToken });
               onSuccess();
             })
             .catch(() => {
