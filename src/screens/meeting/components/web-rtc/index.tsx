@@ -7,10 +7,12 @@ interface IWebRTC {
   id: string;
   userName: string;
   isSelf: boolean;
+  sharingScreenId: string;
+  cameraEnabled: boolean;
 }
 
 export const WebRTC = (props: IWebRTC) => {
-  const { id, userName = 'unknown', isSelf } = props;
+  const { userName = 'unknown', isSelf } = props;
 
   const videoRef = React.useRef<any>();
 
@@ -18,31 +20,74 @@ export const WebRTC = (props: IWebRTC) => {
 
   const rtcPeerRef = React.useRef<RTCPeerConnection>();
 
-  const { video, audio, serverRef, hasVideo, hasAudio } =
-    React.useContext(MeetingContext);
+  const {
+    cameraEnabled,
+    microphoneEnabled,
+    serverConnection,
+    hasVideo,
+    hasAudio,
+    screenSharingId,
+    currentConnectionId,
+    setCurrentConnectionId,
+  } = React.useContext(MeetingContext);
+
+  let sendOnlyLocalStream = React.useRef<MediaStream>();
 
   const createPeerSendonly = async () => {
     const rtcPeer = new RTCPeerConnection();
 
     rtcPeer.addEventListener('icecandidate', (candidate) => {
-      serverRef?.current?.invoke('ProcessCandidateAsync', id, candidate);
+      serverConnection?.invoke(
+        'ProcessCandidateAsync',
+        serverConnection?.connectionId,
+        candidate
+      );
     });
 
-    const localStream = await navigator.mediaDevices.getUserMedia({
-      video: true && hasVideo,
+    sendOnlyLocalStream.current = await navigator.mediaDevices.getUserMedia({
+      video: false && hasVideo,
       audio: true && hasAudio,
     });
 
-    videoRef.current.srcObject = localStream;
+    sendOnlyLocalStream.current
+      .getAudioTracks()
+      .forEach((track: MediaStreamTrack) => {
+        rtcPeer.addTrack(track, sendOnlyLocalStream.current as MediaStream);
+        track.enabled = cameraEnabled;
+      });
 
-    localStream.getTracks().forEach((track: MediaStreamTrack) => {
-      rtcPeer.addTrack(track, localStream);
-      if (track.kind === 'audio') {
-        track.enabled = audio;
-      } else if (track.kind === 'video') {
-        track.enabled = video;
-      }
-    });
+    if (props.sharingScreenId) {
+      const videoConstraints: any = {
+        mandatory: {
+          chromeMediaSource: 'desktop',
+          chromeMediaSourceId: props.sharingScreenId,
+          minWidth: 1080,
+          maxWidth: 1080,
+          minHeight: 520,
+          maxHeight: 520,
+        },
+      };
+      const screenStream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: videoConstraints,
+      });
+
+      const videoTracks = screenStream.getVideoTracks();
+      sendOnlyLocalStream.current.addTrack(videoTracks[0]);
+
+      rtcPeer.addTrack(videoTracks[0], sendOnlyLocalStream.current);
+      console.log('----sharing screen------');
+    } else if (props.cameraEnabled) {
+      sendOnlyLocalStream.current
+        .getVideoTracks()
+        .forEach((track: MediaStreamTrack) => {
+          rtcPeer.addTrack(track, sendOnlyLocalStream.current as MediaStream);
+          track.enabled = true;
+        });
+      console.log('----camera capturing------');
+    }
+
+    videoRef.current.srcObject = sendOnlyLocalStream.current;
 
     const offer = await rtcPeer.createOffer({
       offerToReceiveAudio: false,
@@ -53,7 +98,11 @@ export const WebRTC = (props: IWebRTC) => {
 
     rtcPeerRef.current = rtcPeer;
 
-    serverRef?.current?.invoke('ProcessOfferAsync', id, offer.sdp);
+    serverConnection?.invoke(
+      'ProcessOfferAsync',
+      serverConnection?.connectionId,
+      offer.sdp
+    );
   };
 
   const createPeerRecvonly = async () => {
@@ -65,7 +114,11 @@ export const WebRTC = (props: IWebRTC) => {
     });
 
     rtcPeer.addEventListener('icecandidate', (candidate) => {
-      serverRef?.current?.invoke('ProcessCandidateAsync', id, candidate);
+      serverConnection?.invoke(
+        'ProcessCandidateAsync',
+        serverConnection?.connectionId,
+        candidate
+      );
     });
 
     const offer = await rtcPeer.createOffer({
@@ -77,60 +130,75 @@ export const WebRTC = (props: IWebRTC) => {
 
     rtcPeerRef.current = rtcPeer;
 
-    serverRef?.current?.invoke('ProcessOfferAsync', id, offer.sdp);
+    serverConnection?.invoke(
+      'ProcessOfferAsync',
+      serverConnection?.connectionId,
+      offer.sdp
+    );
+
+    console.log(
+      `process offer for revc connection ${serverConnection?.connectionId}`
+    );
   };
 
   React.useEffect(() => {
-    if (isSelf) {
-      createPeerSendonly();
-    } else {
-      createPeerRecvonly();
+    console.log(currentConnectionId);
+    console.log(serverConnection?.connectionId);
+    if (serverConnection?.connectionId !== currentConnectionId) {
+      console.log('connectionId not the same');
+      if (isSelf) {
+        createPeerSendonly();
+      } else {
+        createPeerRecvonly();
+      }
+
+      serverConnection?.on('ProcessAnswer', (connectionId, answerSDP) => {
+        if (serverConnection?.connectionId === connectionId) {
+          rtcPeerRef.current?.setRemoteDescription(
+            new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
+          );
+        }
+      });
+
+      serverConnection?.on('AddCandidate', (connectionId, candidate) => {
+        if (serverConnection?.connectionId === connectionId) {
+          const objCandidate = JSON.parse(candidate);
+          rtcPeerRef.current?.addIceCandidate(objCandidate);
+        }
+      });
+      if (serverConnection?.connectionId)
+        setCurrentConnectionId(serverConnection.connectionId);
     }
-
-    serverRef?.current?.on('ProcessAnswer', (connectionId, answerSDP) => {
-      if (id === connectionId) {
-        rtcPeerRef.current?.setRemoteDescription(
-          new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
-        );
-      }
-    });
-
-    serverRef?.current?.on('AddCandidate', (connectionId, candidate) => {
-      if (id === connectionId) {
-        const objCandidate = JSON.parse(candidate);
-        rtcPeerRef.current?.addIceCandidate(objCandidate);
-      }
-    });
-  }, [serverRef?.current]);
+  }, [serverConnection]);
 
   useEffect(() => {
     if (isSelf && videoRef.current?.srcObject) {
       videoRef.current.srcObject
         .getAudioTracks()
         .forEach((track: MediaStreamTrack) => {
-          track.enabled = audio;
+          track.enabled = microphoneEnabled;
         });
     }
-  }, [audio]);
+  }, [microphoneEnabled]);
 
-  useEffect(() => {
-    if (isSelf && videoRef.current?.srcObject) {
-      videoRef.current.srcObject
-        .getVideoTracks()
-        .forEach((track: MediaStreamTrack) => {
-          track.enabled = video;
-        });
-    }
-  }, [video]);
+  // useEffect(() => {
+  //   console.log('---camera enabled----');
+  //   if (isSelf && videoRef.current?.srcObject) {
+  //     videoRef.current.srcObject
+  //       .getVideoTracks()
+  //       .forEach((track: MediaStreamTrack) => {
+  //         track.enabled = cameraEnabled;
+  //       });
+  //   }
+  // }, [cameraEnabled]);
 
   return (
     <Box component="div" style={styles.videoContainer}>
       <video
         ref={videoRef}
         autoPlay
-        playsInline
-        width="300"
-        height="300"
+        width="200"
+        height="200"
         style={styles.video}
         muted={isSelf}
       />

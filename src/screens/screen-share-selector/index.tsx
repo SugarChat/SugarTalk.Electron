@@ -4,14 +4,16 @@ import {
   ImageListItem,
   ImageListItemBar,
 } from '@material-ui/core';
-import { desktopCapturer } from 'electron';
+import electron, { desktopCapturer } from 'electron';
 import { DesktopCapturerSource } from 'electron/main';
 import React, { useEffect, useState } from 'react';
 import { PageScreen } from '../../components/page-screen';
 import * as styles from './styles';
 
+type MyDesktopCapturerSource = DesktopCapturerSource & { selected: boolean };
+
 interface ScreenData {
-  screenSources: DesktopCapturerSource[];
+  screenSources: MyDesktopCapturerSource[];
 }
 
 const defaultScreenData: ScreenData = { screenSources: [] };
@@ -25,10 +27,15 @@ export const ScreenShareSelector = () => {
         const screenSources = await desktopCapturer.getSources({
           types: ['window', 'screen'],
         });
-        console.log(screenSources);
 
         setScreenData({
-          screenSources,
+          screenSources: screenSources.map((x) => {
+            const screen: MyDesktopCapturerSource = {
+              ...x,
+              selected: false,
+            };
+            return screen;
+          }),
         });
       };
 
@@ -36,27 +43,63 @@ export const ScreenShareSelector = () => {
     }
   }, [screenData]);
 
+  const onItemSelected = (source: MyDesktopCapturerSource) => {
+    source.selected = !source.selected;
+
+    const newScreenData = { ...screenData };
+    newScreenData.screenSources.forEach((x) => {
+      if (x.id !== source.id) {
+        x.selected = false;
+      } else {
+        x.selected = true;
+      }
+    });
+    setScreenData(newScreenData);
+    console.log(newScreenData);
+  };
+
+  const onConfirmClicked = () => {
+    const selectedScreen = screenData.screenSources.find(
+      (x) => x.selected === true
+    );
+    if (selectedScreen) {
+      const currentWindow = electron.remote.getCurrentWindow();
+      const parent = currentWindow.getParentWindow();
+
+      parent.webContents.send('share-screen-selected', selectedScreen.id);
+      currentWindow.close();
+    }
+  };
+
   return (
     <PageScreen>
-      <div>
-        <ImageList rowHeight={200} cols={3} style={styles.imageList}>
-          {screenData.screenSources.map((item, index) => (
-            <ImageListItem key={index} cols={1}>
-              <img src={item.thumbnail.toDataURL()} alt={item.display_id} />
-              <ImageListItemBar title={item.name} />
-            </ImageListItem>
-          ))}
-        </ImageList>
-        <div style={styles.bottomToolbar}>
-          <Button
-            color="primary"
-            variant="contained"
-            onClick={() => {}}
-            disableElevation
+      <ImageList rowHeight={120} cols={5} style={styles.imageList}>
+        {screenData.screenSources.map((item, index) => (
+          <div
+            style={item.selected ? styles.selectedBox : styles.unselectedBox}
+            key={index}
+            onClick={() => onItemSelected(item)}
           >
-            确定
-          </Button>
-        </div>
+            <ImageListItem cols={1} style={{ height: 100 }}>
+              <img src={item.thumbnail.toDataURL()} alt={item.display_id} />
+              <ImageListItemBar
+                position="bottom"
+                subtitle={item.name}
+                style={styles.itembar}
+              />
+            </ImageListItem>
+          </div>
+        ))}
+      </ImageList>
+      <div style={styles.bottomToolbar}>
+        <Button
+          color="primary"
+          variant="contained"
+          onClick={onConfirmClicked}
+          disableElevation
+        >
+          确定
+        </Button>
       </div>
     </PageScreen>
   );
