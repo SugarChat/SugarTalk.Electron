@@ -3,6 +3,7 @@ import * as FB from 'fb-sdk-wrapper';
 import * as electron from 'electron';
 import Env from '../../config/env';
 import Api from '../../services/api/modules/login';
+import { IGoogleAccessToken } from './type';
 
 const getBrowserWindowInstance = () => {
   return new electron.remote.BrowserWindow({
@@ -18,7 +19,7 @@ const getBrowserWindowInstance = () => {
   });
 };
 
-export const googleAuthenticated = (): Promise<any> => {
+export const googleAuthenticated = (): Promise<IGoogleAccessToken> => {
   return new Promise((resolve, reject) => {
     const authWindow = getBrowserWindowInstance();
 
@@ -52,7 +53,7 @@ export const googleAuthenticated = (): Promise<any> => {
           const code = qs.get('code') as string;
           Api.getGoogleToken(code, redirectUri)
             .then((res) => {
-              resolve(res.data);
+              resolve(res.accessToken);
             })
             .catch((error) => reject(error));
         }

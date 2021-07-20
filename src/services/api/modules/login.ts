@@ -21,14 +21,16 @@ export default {
   getGoogleToken: async (
     code: string,
     redirecturi: string
-  ): Promise<SugarTalkResponse<IGoogleAccessToken>> => {
-    return api.request({
-      url: `/authentication/google/accessToken`,
-      method: `GET`,
-      params: {
-        code,
-        redirecturi,
-      },
-    });
+  ): Promise<{ accessToken: IGoogleAccessToken }> => {
+    return (
+      await api.request({
+        url: `/authentication/google/accessToken`,
+        method: `GET`,
+        params: {
+          code,
+          redirecturi,
+        },
+      })
+    ).data;
   },
 };
