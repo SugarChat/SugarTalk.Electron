@@ -24,6 +24,20 @@ export const WebRTC = (props: IWebRTC) => {
 
   const [initialized, setInitialized] = React.useState<boolean>(false);
 
+  const configuration: RTCConfiguration = {
+    iceServers: [
+      {
+        urls: ['stun:54.241.145.83'],
+      },
+      {
+        urls: ['turn:54.241.145.83'],
+        username: 'kurento',
+        credential: 'YamimealTurn',
+        credentialType: 'password',
+      },
+    ],
+  };
+
   const {
     cameraEnabled,
     microphoneEnabled,
@@ -42,7 +56,7 @@ export const WebRTC = (props: IWebRTC) => {
 
     if (!rtcSendPeerRef.current) {
       console.log('----creating new RTCPeerConnection------');
-      rtcSendPeerRef.current = new RTCPeerConnection();
+      rtcSendPeerRef.current = new RTCPeerConnection(configuration);
 
       rtcSendPeerRef.current.addEventListener('icecandidate', (candidate) => {
         console.log('send ice');
@@ -50,7 +64,7 @@ export const WebRTC = (props: IWebRTC) => {
       });
     }
 
-    console.log(hasAudio, hasVideo);
+    console.log(hasAudio, hasVideo, microphoneEnabled, cameraEnabled);
 
     sendOnlyLocalStream.current = await navigator.mediaDevices.getUserMedia({
       video: false && hasVideo,
@@ -60,11 +74,11 @@ export const WebRTC = (props: IWebRTC) => {
     sendOnlyLocalStream.current
       .getAudioTracks()
       .forEach((track: MediaStreamTrack) => {
+        track.enabled = microphoneEnabled;
         rtcSendPeerRef?.current?.addTrack(
           track,
           sendOnlyLocalStream.current as MediaStream
         );
-        track.enabled = microphoneEnabled;
       });
 
     if (props.sharingScreenId) {
@@ -119,7 +133,7 @@ export const WebRTC = (props: IWebRTC) => {
   const createPeerRecvonly = async () => {
     if (!rtcRecvPeerRef.current) {
       console.log('creating recv connection');
-      rtcRecvPeerRef.current = new RTCPeerConnection();
+      rtcRecvPeerRef.current = new RTCPeerConnection(configuration);
 
       rtcRecvPeerRef.current.addEventListener('addstream', (e: any) => {
         console.log('adding stream recv');
@@ -132,22 +146,23 @@ export const WebRTC = (props: IWebRTC) => {
         console.log('recv ice');
         serverConnection?.invoke('ProcessCandidateAsync', id, candidate);
       });
+
+      const offer = await rtcRecvPeerRef.current.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true,
+      });
+
+      rtcRecvPeerRef.current.setLocalDescription(offer);
+
+      serverConnection?.invoke('ProcessOfferAsync', id, offer.sdp);
     }
-
-    const offer = await rtcRecvPeerRef.current.createOffer({
-      offerToReceiveAudio: true,
-      offerToReceiveVideo: true,
-    });
-
-    rtcRecvPeerRef.current.setLocalDescription(offer);
-
-    serverConnection?.invoke('ProcessOfferAsync', id, offer.sdp);
   };
 
   React.useEffect(() => {
     if (isSelf) {
       createPeerSendonly();
     } else {
+      console.log('---1---');
       createPeerRecvonly();
     }
 
@@ -161,14 +176,14 @@ export const WebRTC = (props: IWebRTC) => {
       });
 
       serverConnection?.on('AddCandidate', (connectionId, candidate) => {
-        if (serverConnection?.connectionId === connectionId) {
+        if (id === connectionId) {
           const objCandidate = JSON.parse(candidate);
           rtcRecvPeerRef.current?.addIceCandidate(objCandidate);
         }
       });
       setInitialized(true);
     }
-  }, [screenSharingId]);
+  });
 
   useEffect(() => {
     if (isSelf && audioRef.current?.srcObject) {
@@ -181,16 +196,16 @@ export const WebRTC = (props: IWebRTC) => {
     }
   });
 
-  // useEffect(() => {
-  //   console.log('---camera enabled----');
-  //   if (isSelf && videoRef.current?.srcObject) {
-  //     videoRef.current.srcObject
-  //       .getVideoTracks()
-  //       .forEach((track: MediaStreamTrack) => {
-  //         track.enabled = cameraEnabled;
-  //       });
-  //   }
-  // }, [cameraEnabled]);
+  useEffect(() => {
+    console.log('---camera enabled----');
+    if (isSelf && videoRef.current?.srcObject) {
+      videoRef.current.srcObject
+        .getVideoTracks()
+        .forEach((track: MediaStreamTrack) => {
+          track.enabled = cameraEnabled;
+        });
+    }
+  }, [cameraEnabled]);
 
   return (
     <Box component="div" style={styles.videoContainer}>
