@@ -123,7 +123,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
     return () => {
       conn.stop();
     };
-  }, [screenSharingId]);
+  }, []);
 
   return (
     <MeetingContext.Provider
