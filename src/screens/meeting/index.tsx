@@ -98,7 +98,6 @@ const MeetingScreen: React.FC = () => {
               id={userSession.id}
               userName={userSession.userName}
               isSelf={userSession.isSelf}
-              sharingScreenId={screenSharingId}
               cameraEnabled={cameraEnabled}
             />
           );
