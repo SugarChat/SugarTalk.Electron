@@ -46,8 +46,8 @@ export const useLoginLogic = () => {
       switch (loginType) {
         case 'Google':
           await googleAuthenticated()
-            .then(({ accessToken }) => {
-              dispatch({ type: 'UpdateIdToken', payload: accessToken });
+            .then(({ idToken }) => {
+              dispatch({ type: 'UpdateIdToken', payload: idToken });
               onSuccess();
             })
             .catch(() => {
