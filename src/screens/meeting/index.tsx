@@ -91,6 +91,7 @@ const MeetingScreen: React.FC = () => {
       <StatusBar />
       <Box style={styles.webRTCContainer}>
         {userSessions.map((userSession, key) => {
+          console.log(userSession);
           return (
             <WebRTC
               key={key.toString()}

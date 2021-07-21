@@ -22,6 +22,8 @@ export const WebRTC = (props: IWebRTC) => {
 
   const rtcRecvPeerRef = React.useRef<RTCPeerConnection>();
 
+  const [initialized, setInitialized] = React.useState<boolean>(false);
+
   const {
     cameraEnabled,
     microphoneEnabled,
@@ -36,18 +38,19 @@ export const WebRTC = (props: IWebRTC) => {
   let sendOnlyLocalStream = React.useRef<MediaStream>();
 
   const createPeerSendonly = async () => {
+    console.log('----createPeerSendonly------');
+
     if (!rtcSendPeerRef.current) {
       console.log('----creating new RTCPeerConnection------');
       rtcSendPeerRef.current = new RTCPeerConnection();
 
       rtcSendPeerRef.current.addEventListener('icecandidate', (candidate) => {
-        serverConnection?.invoke(
-          'ProcessCandidateAsync',
-          serverConnection?.connectionId,
-          candidate
-        );
+        console.log('send ice');
+        serverConnection?.invoke('ProcessCandidateAsync', id, candidate);
       });
     }
+
+    console.log(hasAudio, hasVideo);
 
     sendOnlyLocalStream.current = await navigator.mediaDevices.getUserMedia({
       video: false && hasVideo,
@@ -110,33 +113,33 @@ export const WebRTC = (props: IWebRTC) => {
 
     rtcSendPeerRef?.current.setLocalDescription(offer);
 
-    serverConnection?.invoke(
-      'ProcessOfferAsync',
-      serverConnection?.connectionId,
-      offer.sdp
-    );
+    serverConnection?.invoke('ProcessOfferAsync', id, offer.sdp);
   };
 
   const createPeerRecvonly = async () => {
-    const rtcPeer = new RTCPeerConnection();
+    if (!rtcRecvPeerRef.current) {
+      console.log('creating recv connection');
+      rtcRecvPeerRef.current = new RTCPeerConnection();
 
-    rtcPeer.addEventListener('addstream', (e: any) => {
-      videoRef.current.srcObject = e.stream;
-      audioRef.current.srcObject = e.stream;
-    });
+      rtcRecvPeerRef.current.addEventListener('addstream', (e: any) => {
+        console.log('adding stream recv');
+        console.log(e.stream);
+        videoRef.current.srcObject = e.stream;
+        audioRef.current.srcObject = e.stream;
+      });
 
-    rtcPeer.addEventListener('icecandidate', (candidate) => {
-      serverConnection?.invoke('ProcessCandidateAsync', id, candidate);
-    });
+      rtcRecvPeerRef.current.addEventListener('icecandidate', (candidate) => {
+        console.log('recv ice');
+        serverConnection?.invoke('ProcessCandidateAsync', id, candidate);
+      });
+    }
 
-    const offer = await rtcPeer.createOffer({
+    const offer = await rtcRecvPeerRef.current.createOffer({
       offerToReceiveAudio: true,
       offerToReceiveVideo: true,
     });
 
-    rtcPeer.setLocalDescription(offer);
-
-    rtcRecvPeerRef.current = rtcPeer;
+    rtcRecvPeerRef.current.setLocalDescription(offer);
 
     serverConnection?.invoke('ProcessOfferAsync', id, offer.sdp);
   };
@@ -148,33 +151,35 @@ export const WebRTC = (props: IWebRTC) => {
       createPeerRecvonly();
     }
 
-    serverConnection?.on('ProcessAnswer', (connectionId, answerSDP) => {
-      if (id === connectionId) {
-        rtcRecvPeerRef.current?.setRemoteDescription(
-          new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
-        );
-      }
-    });
+    if (!initialized) {
+      serverConnection?.on('ProcessAnswer', (connectionId, answerSDP) => {
+        if (id === connectionId) {
+          rtcRecvPeerRef.current?.setRemoteDescription(
+            new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
+          );
+        }
+      });
 
-    serverConnection?.on('AddCandidate', (connectionId, candidate) => {
-      if (serverConnection?.connectionId === connectionId) {
-        const objCandidate = JSON.parse(candidate);
-        rtcRecvPeerRef.current?.addIceCandidate(objCandidate);
-      }
-    });
-    if (serverConnection?.connectionId)
-      setCurrentConnectionId(serverConnection.connectionId);
+      serverConnection?.on('AddCandidate', (connectionId, candidate) => {
+        if (serverConnection?.connectionId === connectionId) {
+          const objCandidate = JSON.parse(candidate);
+          rtcRecvPeerRef.current?.addIceCandidate(objCandidate);
+        }
+      });
+      setInitialized(true);
+    }
   }, [screenSharingId]);
 
   useEffect(() => {
     if (isSelf && audioRef.current?.srcObject) {
+      console.log(microphoneEnabled);
       audioRef.current.srcObject
         .getAudioTracks()
         .forEach((track: MediaStreamTrack) => {
           track.enabled = microphoneEnabled;
         });
     }
-  }, [microphoneEnabled]);
+  });
 
   // useEffect(() => {
   //   console.log('---camera enabled----');
@@ -192,12 +197,13 @@ export const WebRTC = (props: IWebRTC) => {
       <video
         ref={videoRef}
         autoPlay
+        playsInline
         width="200"
         height="200"
         style={styles.video}
         muted={isSelf}
       />
-      <audio ref={audioRef} autoPlay muted={isSelf} />
+      {!isSelf && <audio ref={audioRef} autoPlay playsInline muted={isSelf} />}
       <Box component="div" style={styles.userName}>
         {userName}
       </Box>
