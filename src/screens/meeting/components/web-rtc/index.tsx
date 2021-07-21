@@ -17,11 +17,9 @@ export const WebRTC = (props: IWebRTC) => {
 
   const audioRef = React.useRef<any>();
 
-  const rtcSendPeerRef = React.useRef<RTCPeerConnection>();
+  const [rtcSendPeer, setRtcSendPeer] = React.useState<RTCPeerConnection>();
 
-  const rtcRecvPeerRef = React.useRef<RTCPeerConnection>();
-
-  const [initialized, setInitialized] = React.useState<boolean>(false);
+  const [rtcRecvPeer, setRtcRecvPeer] = React.useState<RTCPeerConnection>();
 
   const configuration: RTCConfiguration = {
     iceServers: [
@@ -51,14 +49,11 @@ export const WebRTC = (props: IWebRTC) => {
   const createPeerSendonly = async () => {
     console.log('----createPeerSendonly------');
 
-    if (!rtcSendPeerRef.current) {
-      console.log('----creating new RTCPeerConnection------');
-      rtcSendPeerRef.current = new RTCPeerConnection(configuration);
+    const peer = new RTCPeerConnection(configuration);
 
-      rtcSendPeerRef.current.addEventListener('icecandidate', (candidate) => {
-        serverConnection?.invoke('ProcessCandidateAsync', id, candidate);
-      });
-    }
+    peer.addEventListener('icecandidate', (candidate) => {
+      serverConnection?.invoke('ProcessCandidateAsync', id, candidate);
+    });
 
     const audioStream = await navigator.mediaDevices.getUserMedia({
       video: false,
@@ -67,45 +62,47 @@ export const WebRTC = (props: IWebRTC) => {
 
     audioStream.getAudioTracks().forEach((track: MediaStreamTrack) => {
       track.enabled = microphoneEnabled;
-      rtcSendPeerRef?.current?.addTrack(track, audioStream);
+      peer.addTrack(track, audioStream);
     });
 
-    const offer = await rtcSendPeerRef?.current.createOffer({
+    const offer = await peer.createOffer({
       offerToReceiveAudio: false,
       offerToReceiveVideo: false,
     });
 
-    rtcSendPeerRef?.current.setLocalDescription(offer);
+    peer.setLocalDescription(offer);
+
+    setRtcSendPeer(peer);
 
     serverConnection?.invoke('ProcessOfferAsync', id, offer.sdp);
   };
 
   const createPeerRecvonly = async () => {
-    if (!rtcRecvPeerRef.current) {
-      console.log('creating recv connection');
-      rtcRecvPeerRef.current = new RTCPeerConnection(configuration);
+    console.log('creating recv connection');
+    const peer = new RTCPeerConnection(configuration);
 
-      rtcRecvPeerRef.current.addEventListener('addstream', (e: any) => {
-        console.log('adding stream recv for' + id);
-        console.log(e.stream.getTracks());
-        videoRef.current.srcObject = e.stream;
-        audioRef.current.srcObject = e.stream;
-      });
+    peer.addEventListener('addstream', (e: any) => {
+      console.log('adding stream recv for' + id);
+      console.log(e.stream.getTracks());
+      videoRef.current.srcObject = e.stream;
+      audioRef.current.srcObject = e.stream;
+    });
 
-      rtcRecvPeerRef.current.addEventListener('icecandidate', (candidate) => {
-        console.log('recv ice for' + id);
-        serverConnection?.invoke('ProcessCandidateAsync', id, candidate);
-      });
+    peer.addEventListener('icecandidate', (candidate) => {
+      console.log('recv ice for' + id);
+      serverConnection?.invoke('ProcessCandidateAsync', id, candidate);
+    });
 
-      const offer = await rtcRecvPeerRef.current.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true,
-      });
+    const offer = await peer.createOffer({
+      offerToReceiveAudio: true,
+      offerToReceiveVideo: true,
+    });
 
-      rtcRecvPeerRef.current.setLocalDescription(offer);
+    peer.setLocalDescription(offer);
 
-      serverConnection?.invoke('ProcessOfferAsync', id, offer.sdp);
-    }
+    setRtcRecvPeer(peer);
+
+    serverConnection?.invoke('ProcessOfferAsync', id, offer.sdp);
   };
 
   React.useEffect(() => {
@@ -121,7 +118,7 @@ export const WebRTC = (props: IWebRTC) => {
       if (id === connectionId) {
         console.log('-----id matched---');
 
-        rtcRecvPeerRef.current?.setRemoteDescription(
+        rtcRecvPeer?.setRemoteDescription(
           new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
         );
       }
@@ -130,7 +127,7 @@ export const WebRTC = (props: IWebRTC) => {
     serverConnection?.on('AddCandidate', (connectionId, candidate) => {
       if (id === connectionId) {
         const objCandidate = JSON.parse(candidate);
-        rtcRecvPeerRef.current?.addIceCandidate(objCandidate);
+        rtcRecvPeer?.addIceCandidate(objCandidate);
       }
     });
   }, [serverConnection]);
@@ -198,16 +195,16 @@ export const WebRTC = (props: IWebRTC) => {
 
       const videoTracks = screenStream.getVideoTracks();
 
-      rtcSendPeerRef?.current?.addTrack(videoTracks[0], screenStream);
+      rtcSendPeer?.addTrack(videoTracks[0], screenStream);
 
       videoRef.current.srcObject = screenStream;
 
-      const offer = await rtcSendPeerRef?.current?.createOffer({
+      const offer = await rtcSendPeer?.createOffer({
         offerToReceiveAudio: false,
         offerToReceiveVideo: false,
       });
 
-      rtcSendPeerRef?.current?.setLocalDescription(offer);
+      rtcSendPeer?.setLocalDescription(offer);
 
       serverConnection?.invoke('ProcessOfferAsync', id, offer?.sdp);
     }
