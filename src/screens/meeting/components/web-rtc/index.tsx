@@ -17,23 +17,7 @@ export const WebRTC = (props: IWebRTC) => {
 
   const audioRef = React.useRef<any>();
 
-  const [rtcSendPeer, setRtcSendPeer] = React.useState<RTCPeerConnection>();
-
-  const [rtcRecvPeer, setRtcRecvPeer] = React.useState<RTCPeerConnection>();
-
-  const configuration: RTCConfiguration = {
-    iceServers: [
-      {
-        urls: ['stun:54.241.145.83'],
-      },
-      {
-        urls: ['turn:54.241.145.83'],
-        username: 'kurento',
-        credential: 'YamimealTurn',
-        credentialType: 'password',
-      },
-    ],
-  };
+  const rtcPeerConnection = React.useRef<RTCPeerConnection>();
 
   const {
     cameraEnabled,
@@ -49,7 +33,7 @@ export const WebRTC = (props: IWebRTC) => {
   const createPeerSendonly = async () => {
     console.log('----createPeerSendonly------');
 
-    const peer = new RTCPeerConnection(configuration);
+    const peer = new RTCPeerConnection();
 
     peer.addEventListener('icecandidate', (candidate) => {
       serverConnection?.invoke('ProcessCandidateAsync', id, candidate);
@@ -72,14 +56,14 @@ export const WebRTC = (props: IWebRTC) => {
 
     peer.setLocalDescription(offer);
 
-    setRtcSendPeer(peer);
+    rtcPeerConnection.current = peer;
 
     serverConnection?.invoke('ProcessOfferAsync', id, offer.sdp);
   };
 
   const createPeerRecvonly = async () => {
     console.log('creating recv connection');
-    const peer = new RTCPeerConnection(configuration);
+    const peer = new RTCPeerConnection();
 
     peer.addEventListener('addstream', (e: any) => {
       console.log('adding stream recv for' + id);
@@ -100,7 +84,7 @@ export const WebRTC = (props: IWebRTC) => {
 
     peer.setLocalDescription(offer);
 
-    setRtcRecvPeer(peer);
+    rtcPeerConnection.current = peer;
 
     serverConnection?.invoke('ProcessOfferAsync', id, offer.sdp);
   };
@@ -118,7 +102,7 @@ export const WebRTC = (props: IWebRTC) => {
       if (id === connectionId) {
         console.log('-----id matched---');
 
-        rtcRecvPeer?.setRemoteDescription(
+        rtcPeerConnection?.current?.setRemoteDescription(
           new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
         );
       }
@@ -127,7 +111,7 @@ export const WebRTC = (props: IWebRTC) => {
     serverConnection?.on('AddCandidate', (connectionId, candidate) => {
       if (id === connectionId) {
         const objCandidate = JSON.parse(candidate);
-        rtcRecvPeer?.addIceCandidate(objCandidate);
+        rtcPeerConnection?.current?.addIceCandidate(objCandidate);
       }
     });
   }, [serverConnection]);
@@ -195,16 +179,16 @@ export const WebRTC = (props: IWebRTC) => {
 
       const videoTracks = screenStream.getVideoTracks();
 
-      rtcSendPeer?.addTrack(videoTracks[0], screenStream);
+      rtcPeerConnection?.current?.addTrack(videoTracks[0], screenStream);
 
       videoRef.current.srcObject = screenStream;
 
-      const offer = await rtcSendPeer?.createOffer({
+      const offer = await rtcPeerConnection?.current?.createOffer({
         offerToReceiveAudio: false,
         offerToReceiveVideo: false,
       });
 
-      rtcSendPeer?.setLocalDescription(offer);
+      rtcPeerConnection?.current?.setLocalDescription(offer);
 
       serverConnection?.invoke('ProcessOfferAsync', id, offer?.sdp);
     }
