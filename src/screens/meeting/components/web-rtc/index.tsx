@@ -66,14 +66,11 @@ export const WebRTC = (props: IWebRTC) => {
     const peer = new RTCPeerConnection();
 
     peer.addEventListener('addstream', (e: any) => {
-      console.log('adding stream recv for' + id);
-      console.log(e.stream.getTracks());
       videoRef.current.srcObject = e.stream;
       audioRef.current.srcObject = e.stream;
     });
 
     peer.addEventListener('icecandidate', (candidate) => {
-      console.log('recv ice for' + id);
       serverConnection?.invoke('ProcessCandidateAsync', id, candidate);
     });
 
@@ -97,11 +94,8 @@ export const WebRTC = (props: IWebRTC) => {
     }
 
     serverConnection?.on('ProcessAnswer', (connectionId, answerSDP) => {
-      console.log('processing answer for id ' + connectionId);
       console.log(id);
       if (id === connectionId) {
-        console.log('-----id matched---');
-
         rtcPeerConnection?.current?.setRemoteDescription(
           new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
         );
@@ -128,9 +122,7 @@ export const WebRTC = (props: IWebRTC) => {
   }, [microphoneEnabled]);
 
   useEffect(() => {
-    console.log('---camera enabled----', cameraEnabled);
     if (isSelf && videoRef.current?.srcObject) {
-      console.log('--setting camera---');
       const videoTracks = videoRef.current.srcObject.getVideoTracks();
 
       videoTracks.forEach((track: MediaStreamTrack) => {
