@@ -52,8 +52,6 @@ export const WebRTC = (props: IWebRTC) => {
       peer.addTrack(track, audioStream);
     });
 
-    videoRef.current.srcObject = audioStream;
-
     const offer = await peer.createOffer({
       offerToReceiveAudio: false,
       offerToReceiveVideo: false,
@@ -63,6 +61,7 @@ export const WebRTC = (props: IWebRTC) => {
 
     rtcPeerConnection.current = peer;
 
+    videoRef.current.srcObject = audioStream;
     serverConnection?.current?.invoke('ProcessOfferAsync', id, offer.sdp);
   };
 
@@ -71,12 +70,13 @@ export const WebRTC = (props: IWebRTC) => {
     const peer = new RTCPeerConnection();
 
     peer.addEventListener('addstream', (e: any) => {
-      console.log(e.stream);
+      console.log('---adding stream----');
       videoRef.current.srcObject = e.stream;
       audioRef.current.srcObject = e.stream;
     });
 
     peer.addEventListener('icecandidate', (candidate) => {
+      console.log('---adding ice----');
       serverConnection?.current?.invoke('ProcessCandidateAsync', id, candidate);
     });
 
@@ -121,24 +121,18 @@ export const WebRTC = (props: IWebRTC) => {
 
   useEffect(() => {
     console.log(microphoneEnabled, isSelf, audioRef.current?.srcObject);
-    if (isSelf && videoRef.current?.srcObject) {
-      videoRef.current.srcObject
-        .getAudioTracks()
-        .forEach((track: MediaStreamTrack) => {
-          track.enabled = microphoneEnabled;
-        });
+    if (isSelf) {
+      rtcPeerConnection.current?.getSenders().forEach((x) => {
+        if (x.track?.kind === 'audio') {
+          x.track.enabled = microphoneEnabled;
+        }
+      });
     }
   }, [microphoneEnabled]);
 
   useEffect(() => {
-    console.log(isSelf, videoRef.current?.srcObject);
     if (isSelf && videoRef.current?.srcObject) {
-      console.log('----video2---');
-      const videoTracks = videoRef.current.srcObject.getVideoTracks();
-
-      videoTracks.forEach((track: MediaStreamTrack) => {
-        track.enabled = cameraEnabled;
-      });
+      recreatePeerConnection('', cameraEnabled);
     }
   }, [cameraEnabled]);
 
@@ -148,10 +142,46 @@ export const WebRTC = (props: IWebRTC) => {
 
   const setupScreenSharing = async () => {
     if (screenSharingId && isSelf) {
+      await recreatePeerConnection(screenSharingId, false);
+    }
+  };
+
+  const recreatePeerConnection = async (
+    screenId: string,
+    turnOnCamera: boolean
+  ) => {
+    if (screenId && turnOnCamera) {
+      throw 'Cannot turn on camera while in screen sharing';
+    }
+
+    videoRef.current.srcObject
+      .getTracks()
+      .forEach((track: MediaStreamTrack) => {
+        track.stop();
+      });
+
+    const peer = new RTCPeerConnection();
+
+    const baseStream = await navigator.mediaDevices.getUserMedia({
+      audio: true && hasAudio,
+      video: turnOnCamera && hasVideo,
+    });
+
+    baseStream.getTracks().forEach((track: MediaStreamTrack) => {
+      if (track.kind === 'audio') {
+        track.enabled = microphoneEnabled;
+      } else if (track.kind === 'video') {
+        track.enabled = cameraEnabled;
+      }
+
+      peer.addTrack(track, baseStream);
+    });
+
+    if (screenId) {
       const videoConstraints: any = {
         mandatory: {
           chromeMediaSource: 'desktop',
-          chromeMediaSourceId: screenSharingId,
+          chromeMediaSourceId: screenId,
           minWidth: 1080,
           maxWidth: 1080,
           minHeight: 520,
@@ -159,13 +189,10 @@ export const WebRTC = (props: IWebRTC) => {
         },
       };
 
-      const peer = new RTCPeerConnection();
-
       const screenStream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: videoConstraints,
       });
-      console.log('-----111----');
 
       screenStream.getTracks().forEach((track: MediaStreamTrack) => {
         if (track.kind === 'audio') {
@@ -173,26 +200,25 @@ export const WebRTC = (props: IWebRTC) => {
         } else if (track.kind === 'video') {
           track.enabled = true;
         }
-
+        baseStream.addTrack(track);
         peer.addTrack(track, screenStream);
       });
-
-      console.log('-----aaa----');
-
-      rtcPeerConnection.current = peer;
-
-      videoRef.current.srcObject = screenStream;
-
-      const offer = await rtcPeerConnection?.current?.createOffer({
-        offerToReceiveAudio: false,
-        offerToReceiveVideo: false,
-      });
-
-      rtcPeerConnection?.current?.setLocalDescription(offer);
-
-      serverConnection?.current?.invoke('ProcessOfferAsync', id, offer?.sdp);
     }
+
+    videoRef.current.srcObject = baseStream;
+
+    rtcPeerConnection.current = peer;
+
+    const offer = await rtcPeerConnection?.current?.createOffer({
+      offerToReceiveAudio: false,
+      offerToReceiveVideo: false,
+    });
+
+    rtcPeerConnection?.current?.setLocalDescription(offer);
+
+    serverConnection?.current?.invoke('ProcessOfferAsync', id, offer?.sdp);
   };
+
   return (
     <Box component="div" style={styles.videoContainer}>
       <video

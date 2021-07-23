@@ -67,7 +67,6 @@ const MeetingScreen: React.FC = () => {
     });
 
     serverConnection?.current?.on('OtherLeft', (connectionId: string) => {
-      console.log(`----left---- ${connectionId}`);
       removeUserSession(connectionId);
     });
   }, [serverConnection?.current]);
