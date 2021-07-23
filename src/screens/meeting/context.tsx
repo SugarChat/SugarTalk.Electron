@@ -18,34 +18,49 @@ export interface IMeetingInfo {
 }
 
 interface IMeetingContextValue {
-  video: boolean;
-  setVideo: React.Dispatch<React.SetStateAction<boolean>>;
-  audio: boolean;
-  setAudio: React.Dispatch<React.SetStateAction<boolean>>;
-  serverRef: React.MutableRefObject<HubConnection | undefined> | undefined;
+  toggleCamera: React.Dispatch<React.SetStateAction<boolean>>;
+  toggleMicrophone: React.Dispatch<React.SetStateAction<boolean>>;
+  setScreenSharingId: (screenId: string) => void;
+  setCurrentConnectionId: (connectionId: string) => void;
+  serverConnection:
+    | React.MutableRefObject<HubConnection | undefined>
+    | undefined;
   hasVideo: boolean;
   hasAudio: boolean;
   meetingNumber: string;
+  cameraEnabled: boolean;
+  microphoneEnabled: boolean;
+  screenSharingId: string;
+  currentConnectionId: string;
 }
 
 export const MeetingContext = React.createContext<IMeetingContextValue>({
-  video: false,
-  setVideo: () => {},
-  audio: false,
-  setAudio: () => {},
-  serverRef: undefined,
+  toggleCamera: () => {},
+  toggleMicrophone: () => {},
+  setScreenSharingId: (screenId: string) => {},
+  setCurrentConnectionId: (connectionId: string) => {},
+  serverConnection: undefined,
   hasVideo: false,
   hasAudio: false,
   meetingNumber: '',
+  cameraEnabled: false,
+  microphoneEnabled: false,
+  screenSharingId: '',
+  currentConnectionId: '',
 });
 
 export const MeetingProvider: React.FC = ({ children }) => {
-  const [video, setVideo] = React.useState<boolean>(true);
-  const [audio, setAudio] = React.useState<boolean>(true);
+  const [cameraEnabled, toggleCamera] = React.useState<boolean>(true);
+  const [microphoneEnabled, toggleMicrophone] = React.useState<boolean>(true);
+  const [screenSharingId, setScreenSharingId] = React.useState<string>('');
+
   const [hasVideo, setHasVideo] = React.useState<boolean>(true);
   const [hasAudio, setHasAudio] = React.useState<boolean>(true);
   const [meetingNumber, setMeetingNumber] = React.useState<string>('');
-  const serverRef = React.useRef<HubConnection>();
+  const serverConnection = React.useRef<HubConnection>();
+  const [currentConnectionId, setCurrentConnectionId] =
+    React.useState<string>('');
+
   const location = useLocation();
   const { userStore } = useStores();
 
@@ -55,63 +70,66 @@ export const MeetingProvider: React.FC = ({ children }) => {
     }) as unknown as IMeetingInfo;
 
     const initMediaDeviceStatus = async () => {
-      const videoStatus = await getMediaDeviceAccessAndStatus('camera');
-      const audioStatus = await getMediaDeviceAccessAndStatus('microphone');
+      const hasCamera = await getMediaDeviceAccessAndStatus('camera');
+      const hasMicrophone = await getMediaDeviceAccessAndStatus('microphone');
 
-      if (videoStatus === false && audioStatus === false) {
+      if (hasCamera === false && hasMicrophone === false) {
         showRequestMediaAccessDialog();
         electron.remote.getCurrentWindow().close();
       }
 
-      setHasVideo(videoStatus);
-      setHasAudio(audioStatus);
+      setHasVideo(hasCamera);
+      setHasAudio(hasMicrophone);
 
-      setVideo((meetingInfo.connectedWithVideo as boolean) && videoStatus);
-      setAudio((meetingInfo.connectedWithAudio as boolean) && audioStatus);
+      toggleCamera((meetingInfo.connectedWithVideo as boolean) && hasCamera);
+      toggleMicrophone(
+        (meetingInfo.connectedWithAudio as boolean) && hasMicrophone
+      );
     };
-
-    console.log(meetingInfo);
 
     initMediaDeviceStatus();
 
     setMeetingNumber(meetingInfo.meetingId);
 
     const wsUrl = `${Env.apiUrl}meetingHub?username=${meetingInfo.userName}&meetingNumber=${meetingInfo.meetingId}`;
-
-    serverRef.current = new HubConnectionBuilder()
+    serverConnection.current = new HubConnectionBuilder()
       .withUrl(wsUrl, { accessTokenFactory: () => userStore.idToken })
       .build();
 
-    serverRef.current.onclose((error?: Error) => {
+    serverConnection.current.onclose((error?: Error) => {
       if (error?.message.includes('MeetingNotFoundException')) {
         alert('Meeting not found.');
         electron.remote.getCurrentWindow().close();
       }
     });
 
-    serverRef.current.start().catch((error?: any) => {
-      if (error?.statusCode === 401) {
+    serverConnection.current?.start().catch((err?: any) => {
+      if (err?.statusCode === 401) {
         alert('Unauthorized.');
         electron.remote.getCurrentWindow().close();
       }
     });
 
     return () => {
-      serverRef.current?.stop();
+      serverConnection.current?.stop();
     };
   }, []);
 
   return (
     <MeetingContext.Provider
       value={{
-        video,
-        setVideo,
-        audio,
-        setAudio,
-        serverRef,
+        toggleCamera,
+        toggleMicrophone,
+        setScreenSharingId,
+        setCurrentConnectionId,
+        serverConnection,
         hasVideo,
         hasAudio,
         meetingNumber,
+        cameraEnabled,
+        microphoneEnabled,
+        screenSharingId,
+        currentConnectionId,
       }}
     >
       {children && children}

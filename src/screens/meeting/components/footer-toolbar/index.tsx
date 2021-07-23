@@ -35,23 +35,24 @@ const ToolbarButton = (props: IToolbarButton) => {
 };
 
 export const FooterToolbar = () => {
-  const { video, setVideo, audio, setAudio } = React.useContext(MeetingContext);
+  const { cameraEnabled, toggleCamera, microphoneEnabled, toggleMicrophone } =
+    React.useContext(MeetingContext);
 
   const toggleVideo = async () => {
-    if (video) {
-      setVideo(false);
+    if (cameraEnabled) {
+      toggleCamera(false);
     } else {
       const status = await getMediaDeviceAccessAndStatus('camera', true);
-      setVideo(status);
+      toggleCamera(status);
     }
   };
 
   const toggleVoice = async () => {
-    if (audio) {
-      setAudio(false);
+    if (microphoneEnabled) {
+      toggleMicrophone(false);
     } else {
       const status = await getMediaDeviceAccessAndStatus('microphone', true);
-      setAudio(status);
+      toggleMicrophone(status);
     }
   };
 
@@ -62,8 +63,8 @@ export const FooterToolbar = () => {
   const onShareScreenClicked = () => {
     const meetingWindow = new electron.remote.BrowserWindow({
       show: true,
-      width: 1080,
-      height: 720,
+      width: 880,
+      height: 620,
       movable: true,
       modal: true,
       webPreferences: {
@@ -71,6 +72,9 @@ export const FooterToolbar = () => {
         enableRemoteModule: true,
       },
     });
+
+    const currentWindow = electron.remote.getCurrentWindow();
+    meetingWindow.setParentWindow(currentWindow);
     meetingWindow.loadURL(`file://${__dirname}/index.html#/ScreenSelector`);
   };
 
@@ -81,15 +85,15 @@ export const FooterToolbar = () => {
           <Grid item>
             <ToolbarButton
               onClick={toggleVoice}
-              text={audio ? '静音' : '解除静音'}
-              icon={audio ? <MicIcon /> : <MicOffIcon />}
+              text={microphoneEnabled ? '静音' : '解除静音'}
+              icon={microphoneEnabled ? <MicIcon /> : <MicOffIcon />}
             />
           </Grid>
           <Grid item>
             <ToolbarButton
               onClick={toggleVideo}
-              text={video ? '关闭视频' : '开启视频'}
-              icon={video ? <VideocamIcon /> : <VideocamOffIcon />}
+              text={cameraEnabled ? '关闭视频' : '开启视频'}
+              icon={cameraEnabled ? <VideocamIcon /> : <VideocamOffIcon />}
             />
           </Grid>
           <Grid item>

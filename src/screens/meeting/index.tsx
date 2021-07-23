@@ -21,7 +21,14 @@ interface IUser {
 const MeetingScreen: React.FC = () => {
   const [userSessions, setUserSessions] = React.useState<IUserSession[]>([]);
 
-  const { serverRef } = React.useContext(MeetingContext);
+  const [ipRendererBound, setipRendererBound] = React.useState<boolean>(false);
+
+  const {
+    serverConnection,
+    cameraEnabled,
+    setScreenSharingId,
+    screenSharingId,
+  } = React.useContext(MeetingContext);
 
   const createUserSession = (user: IUser, isSelf: boolean) => {
     const userSession: IUserSession = {
@@ -45,24 +52,38 @@ const MeetingScreen: React.FC = () => {
   };
 
   React.useEffect(() => {
-    serverRef?.current?.on('SetLocalUser', (localUser: IUser) => {
+    serverConnection?.current?.on('SetLocalUser', (localUser: IUser) => {
       createUserSession(localUser, true);
     });
 
-    serverRef?.current?.on('SetOtherUsers', (otherUsers: IUser[]) => {
+    serverConnection?.current?.on('SetOtherUsers', (otherUsers: IUser[]) => {
       otherUsers.forEach((user: IUser) => {
         createUserSession(user, false);
       });
     });
 
-    serverRef?.current?.on('OtherJoined', (otherUser: IUser) => {
+    serverConnection?.current?.on('OtherJoined', (otherUser: IUser) => {
       createUserSession(otherUser, false);
     });
 
-    serverRef?.current?.on('OtherLeft', (connectionId: string) => {
+    serverConnection?.current?.on('OtherLeft', (connectionId: string) => {
       removeUserSession(connectionId);
     });
-  }, [serverRef?.current]);
+  }, [serverConnection?.current]);
+
+  React.useEffect(() => {
+    if (!ipRendererBound) {
+      const ipcRenderer = require('electron').ipcRenderer;
+      ipcRenderer.on(
+        'share-screen-selected',
+        async (_e: any, screenId: string) => {
+          setScreenSharingId(screenId);
+          console.log(screenId);
+        }
+      );
+      setipRendererBound(true);
+    }
+  }, [screenSharingId]);
 
   return (
     <PageScreen style={styles.root}>
@@ -75,10 +96,12 @@ const MeetingScreen: React.FC = () => {
               id={userSession.id}
               userName={userSession.userName}
               isSelf={userSession.isSelf}
+              cameraEnabled={cameraEnabled}
             />
           );
         })}
       </Box>
+
       <FooterToolbar />
     </PageScreen>
   );
