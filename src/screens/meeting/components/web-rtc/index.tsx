@@ -29,8 +29,6 @@ export const WebRTC = (props: IWebRTC) => {
   } = React.useContext(MeetingContext);
 
   const createPeerSendonly = async () => {
-    console.log('----createPeerSendonly------', serverConnection);
-
     recreatePeerConnection('', cameraEnabled).then((peer) => {
       peer.current?.addEventListener('icecandidate', (candidate) => {
         serverConnection?.current?.invoke(
@@ -43,7 +41,6 @@ export const WebRTC = (props: IWebRTC) => {
   };
 
   const createPeerRecvonly = async () => {
-    console.log('creating recv connection');
     const peer = new RTCPeerConnection();
 
     peer.addEventListener('addstream', (e: any) => {
@@ -78,7 +75,6 @@ export const WebRTC = (props: IWebRTC) => {
       'ProcessAnswer',
       (connectionId, answerSDP) => {
         if (id === connectionId) {
-          console.log('-----ProcessAnswer----', id);
           rtcPeerConnection?.current?.setRemoteDescription(
             new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
           );
@@ -90,11 +86,7 @@ export const WebRTC = (props: IWebRTC) => {
       'NewOfferCreated',
       (connectionId, answerSDP) => {
         if (id === connectionId && !isSelf) {
-          console.log(connectionId);
-
           createPeerRecvonly();
-        } else {
-          console.log('-----for receive----');
         }
       }
     );
