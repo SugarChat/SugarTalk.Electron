@@ -52,25 +52,25 @@ const MeetingScreen: React.FC = () => {
   };
 
   React.useEffect(() => {
-    serverConnection?.on('SetLocalUser', (localUser: IUser) => {
+    serverConnection?.current?.on('SetLocalUser', (localUser: IUser) => {
       createUserSession(localUser, true);
     });
 
-    serverConnection?.on('SetOtherUsers', (otherUsers: IUser[]) => {
+    serverConnection?.current?.on('SetOtherUsers', (otherUsers: IUser[]) => {
       otherUsers.forEach((user: IUser) => {
         createUserSession(user, false);
       });
     });
 
-    serverConnection?.on('OtherJoined', (otherUser: IUser) => {
+    serverConnection?.current?.on('OtherJoined', (otherUser: IUser) => {
       createUserSession(otherUser, false);
     });
 
-    serverConnection?.on('OtherLeft', (connectionId: string) => {
+    serverConnection?.current?.on('OtherLeft', (connectionId: string) => {
       console.log(`----left---- ${connectionId}`);
       removeUserSession(connectionId);
     });
-  }, [serverConnection]);
+  }, [serverConnection?.current]);
 
   React.useEffect(() => {
     if (!ipRendererBound) {
@@ -91,7 +91,6 @@ const MeetingScreen: React.FC = () => {
       <StatusBar />
       <Box style={styles.webRTCContainer}>
         {userSessions.map((userSession, key) => {
-          console.log(userSession);
           return (
             <WebRTC
               key={key.toString()}

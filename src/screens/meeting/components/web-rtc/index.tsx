@@ -26,28 +26,33 @@ export const WebRTC = (props: IWebRTC) => {
     hasVideo,
     hasAudio,
     screenSharingId,
-    currentConnectionId,
-    setCurrentConnectionId,
   } = React.useContext(MeetingContext);
 
   const createPeerSendonly = async () => {
-    console.log('----createPeerSendonly------');
+    console.log('----createPeerSendonly------', serverConnection);
 
     const peer = new RTCPeerConnection();
 
     peer.addEventListener('icecandidate', (candidate) => {
-      serverConnection?.invoke('ProcessCandidateAsync', id, candidate);
+      serverConnection?.current?.invoke('ProcessCandidateAsync', id, candidate);
     });
 
     const audioStream = await navigator.mediaDevices.getUserMedia({
-      video: false,
+      video: false && hasVideo,
       audio: true && hasAudio,
     });
 
-    audioStream.getAudioTracks().forEach((track: MediaStreamTrack) => {
-      track.enabled = microphoneEnabled;
+    audioStream.getTracks().forEach((track: MediaStreamTrack) => {
+      if (track.kind === 'audio') {
+        track.enabled = microphoneEnabled;
+      } else if (track.kind === 'video') {
+        track.enabled = cameraEnabled;
+      }
+
       peer.addTrack(track, audioStream);
     });
+
+    videoRef.current.srcObject = audioStream;
 
     const offer = await peer.createOffer({
       offerToReceiveAudio: false,
@@ -58,7 +63,7 @@ export const WebRTC = (props: IWebRTC) => {
 
     rtcPeerConnection.current = peer;
 
-    serverConnection?.invoke('ProcessOfferAsync', id, offer.sdp);
+    serverConnection?.current?.invoke('ProcessOfferAsync', id, offer.sdp);
   };
 
   const createPeerRecvonly = async () => {
@@ -66,12 +71,13 @@ export const WebRTC = (props: IWebRTC) => {
     const peer = new RTCPeerConnection();
 
     peer.addEventListener('addstream', (e: any) => {
+      console.log(e.stream);
       videoRef.current.srcObject = e.stream;
       audioRef.current.srcObject = e.stream;
     });
 
     peer.addEventListener('icecandidate', (candidate) => {
-      serverConnection?.invoke('ProcessCandidateAsync', id, candidate);
+      serverConnection?.current?.invoke('ProcessCandidateAsync', id, candidate);
     });
 
     const offer = await peer.createOffer({
@@ -83,37 +89,40 @@ export const WebRTC = (props: IWebRTC) => {
 
     rtcPeerConnection.current = peer;
 
-    serverConnection?.invoke('ProcessOfferAsync', id, offer.sdp);
+    serverConnection?.current?.invoke('ProcessOfferAsync', id, offer.sdp);
   };
 
   React.useEffect(() => {
+    console.log('----starting----');
     if (isSelf) {
       createPeerSendonly();
     } else {
       createPeerRecvonly();
     }
 
-    serverConnection?.on('ProcessAnswer', (connectionId, answerSDP) => {
-      console.log(id);
-      if (id === connectionId) {
-        rtcPeerConnection?.current?.setRemoteDescription(
-          new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
-        );
+    serverConnection?.current?.on(
+      'ProcessAnswer',
+      (connectionId, answerSDP) => {
+        if (id === connectionId) {
+          rtcPeerConnection?.current?.setRemoteDescription(
+            new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
+          );
+        }
       }
-    });
+    );
 
-    serverConnection?.on('AddCandidate', (connectionId, candidate) => {
+    serverConnection?.current?.on('AddCandidate', (connectionId, candidate) => {
       if (id === connectionId) {
         const objCandidate = JSON.parse(candidate);
         rtcPeerConnection?.current?.addIceCandidate(objCandidate);
       }
     });
-  }, [serverConnection]);
+  }, [serverConnection?.current]);
 
   useEffect(() => {
-    if (isSelf && audioRef.current?.srcObject) {
-      console.log(microphoneEnabled);
-      audioRef.current.srcObject
+    console.log(microphoneEnabled, isSelf, audioRef.current?.srcObject);
+    if (isSelf && videoRef.current?.srcObject) {
+      videoRef.current.srcObject
         .getAudioTracks()
         .forEach((track: MediaStreamTrack) => {
           track.enabled = microphoneEnabled;
@@ -122,30 +131,15 @@ export const WebRTC = (props: IWebRTC) => {
   }, [microphoneEnabled]);
 
   useEffect(() => {
+    console.log(isSelf, videoRef.current?.srcObject);
     if (isSelf && videoRef.current?.srcObject) {
+      console.log('----video2---');
       const videoTracks = videoRef.current.srcObject.getVideoTracks();
 
       videoTracks.forEach((track: MediaStreamTrack) => {
-        console.log(track);
-
         track.enabled = cameraEnabled;
       });
     }
-
-    if (props.cameraEnabled) {
-      // sendOnlyLocalStream
-      //   .getVideoTracks()
-      //   .forEach((track: MediaStreamTrack) => {
-      //     rtcSendPeerRef?.current?.addTrack(
-      //       track,
-      //       sendOnlyLocalStream.current as MediaStream
-      //     );
-      //     track.enabled = true;
-      //   });
-      // console.log('----camera capturing------');
-    }
-
-    //videoRef.current.srcObject = sendOnlyLocalStream.current;
   }, [cameraEnabled]);
 
   useEffect(() => {
@@ -164,14 +158,28 @@ export const WebRTC = (props: IWebRTC) => {
           maxHeight: 520,
         },
       };
+
+      const peer = new RTCPeerConnection();
+
       const screenStream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: videoConstraints,
       });
+      console.log('-----111----');
 
-      const videoTracks = screenStream.getVideoTracks();
+      screenStream.getTracks().forEach((track: MediaStreamTrack) => {
+        if (track.kind === 'audio') {
+          track.enabled = microphoneEnabled;
+        } else if (track.kind === 'video') {
+          track.enabled = true;
+        }
 
-      rtcPeerConnection?.current?.addTrack(videoTracks[0], screenStream);
+        peer.addTrack(track, screenStream);
+      });
+
+      console.log('-----aaa----');
+
+      rtcPeerConnection.current = peer;
 
       videoRef.current.srcObject = screenStream;
 
@@ -182,7 +190,7 @@ export const WebRTC = (props: IWebRTC) => {
 
       rtcPeerConnection?.current?.setLocalDescription(offer);
 
-      serverConnection?.invoke('ProcessOfferAsync', id, offer?.sdp);
+      serverConnection?.current?.invoke('ProcessOfferAsync', id, offer?.sdp);
     }
   };
   return (
@@ -190,13 +198,12 @@ export const WebRTC = (props: IWebRTC) => {
       <video
         ref={videoRef}
         autoPlay
-        playsInline
         width="200"
         height="200"
         style={styles.video}
         muted={isSelf}
       />
-      {!isSelf && <audio ref={audioRef} autoPlay playsInline muted={isSelf} />}
+      {!isSelf && <audio ref={audioRef} autoPlay muted={isSelf} />}
       <Box component="div" style={styles.userName}>
         {userName}
       </Box>

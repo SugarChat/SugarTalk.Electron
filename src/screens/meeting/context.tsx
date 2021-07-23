@@ -22,7 +22,9 @@ interface IMeetingContextValue {
   toggleMicrophone: React.Dispatch<React.SetStateAction<boolean>>;
   setScreenSharingId: (screenId: string) => void;
   setCurrentConnectionId: (connectionId: string) => void;
-  serverConnection: HubConnection | undefined;
+  serverConnection:
+    | React.MutableRefObject<HubConnection | undefined>
+    | undefined;
   hasVideo: boolean;
   hasAudio: boolean;
   meetingNumber: string;
@@ -55,8 +57,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const [hasVideo, setHasVideo] = React.useState<boolean>(true);
   const [hasAudio, setHasAudio] = React.useState<boolean>(true);
   const [meetingNumber, setMeetingNumber] = React.useState<string>('');
-  const [serverConnection, setServerConnection] =
-    React.useState<HubConnection>();
+  const serverConnection = React.useRef<HubConnection>();
   const [currentConnectionId, setCurrentConnectionId] =
     React.useState<string>('');
 
@@ -86,42 +87,31 @@ export const MeetingProvider: React.FC = ({ children }) => {
       );
     };
 
-    const connectToServer = async () => {
-      try {
-        await conn.start();
-        setServerConnection(conn);
-      } catch (err) {
-        if (err.statusCode === 401) {
-          alert('Unauthorized.');
-          electron.remote.getCurrentWindow().close();
-        }
-      }
-    };
-
     initMediaDeviceStatus();
 
     setMeetingNumber(meetingInfo.meetingId);
 
-    console.log('----about to reconnect------');
     const wsUrl = `${Env.apiUrl}meetingHub?username=${meetingInfo.userName}&meetingNumber=${meetingInfo.meetingId}`;
-
-    console.log(serverConnection);
-
-    const conn = new HubConnectionBuilder()
+    serverConnection.current = new HubConnectionBuilder()
       .withUrl(wsUrl, { accessTokenFactory: () => userStore.idToken })
       .build();
 
-    conn.onclose((error?: Error) => {
+    serverConnection.current.onclose((error?: Error) => {
       if (error?.message.includes('MeetingNotFoundException')) {
         alert('Meeting not found.');
         electron.remote.getCurrentWindow().close();
       }
     });
 
-    connectToServer();
+    serverConnection.current?.start().catch((err?: any) => {
+      if (err?.statusCode === 401) {
+        alert('Unauthorized.');
+        electron.remote.getCurrentWindow().close();
+      }
+    });
 
     return () => {
-      conn.stop();
+      serverConnection.current?.stop();
     };
   }, []);
 
