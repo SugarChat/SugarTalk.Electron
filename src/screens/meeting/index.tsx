@@ -11,6 +11,10 @@ interface IUserSession {
   id: string;
   userName: string;
   isSelf: boolean;
+  sdp: string;
+  offerIndex: number;
+  newIceCandidate: string;
+  candidateIndex: number;
 }
 
 interface IUser {
@@ -35,6 +39,10 @@ const MeetingScreen: React.FC = () => {
       id: user.id,
       userName: user.userName,
       isSelf,
+      sdp: '',
+      offerIndex: 0,
+      newIceCandidate: '',
+      candidateIndex: 0,
     };
 
     setUserSessions((oldUserSessions: IUserSession[]) => [
@@ -69,6 +77,34 @@ const MeetingScreen: React.FC = () => {
     serverConnection?.current?.on('OtherLeft', (connectionId: string) => {
       removeUserSession(connectionId);
     });
+
+    serverConnection?.current?.on(
+      'ProcessAnswer',
+      (connectionId, answerSDP: string) => {
+        const target = userSessions.find((x) => x.id === connectionId);
+        if (target) {
+          target.sdp = answerSDP;
+          setUserSessions([...userSessions]);
+        }
+      }
+    );
+
+    serverConnection?.current?.on('NewOfferCreated', (connectionId, _) => {
+      const target = userSessions.find((x) => x.id === connectionId);
+      if (target) {
+        target.offerIndex += 1;
+        setUserSessions([...userSessions]);
+      }
+    });
+
+    serverConnection?.current?.on('AddCandidate', (connectionId, candidate) => {
+      const target = userSessions.find((x) => x.id === connectionId);
+      if (target) {
+        target.candidateIndex += 1;
+        target.newIceCandidate = candidate;
+        setUserSessions([...userSessions]);
+      }
+    });
   }, [serverConnection?.current]);
 
   React.useEffect(() => {
@@ -97,6 +133,10 @@ const MeetingScreen: React.FC = () => {
               userName={userSession.userName}
               isSelf={userSession.isSelf}
               cameraEnabled={cameraEnabled}
+              sdp={userSession.sdp}
+              offerIndex={userSession.offerIndex}
+              candidateIndex={userSession.candidateIndex}
+              newCandidate={userSession.newIceCandidate}
             />
           );
         })}

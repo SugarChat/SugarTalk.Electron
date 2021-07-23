@@ -8,10 +8,22 @@ interface IWebRTC {
   userName: string;
   isSelf: boolean;
   cameraEnabled: boolean;
+  sdp: string;
+  offerIndex: number;
+  candidateIndex: number;
+  newCandidate: string;
 }
 
 export const WebRTC = (props: IWebRTC) => {
-  const { id, userName = 'unknown', isSelf } = props;
+  const {
+    id,
+    userName = 'unknown',
+    isSelf,
+    sdp,
+    offerIndex,
+    candidateIndex,
+    newCandidate,
+  } = props;
 
   const videoRef = React.useRef<any>();
 
@@ -64,40 +76,33 @@ export const WebRTC = (props: IWebRTC) => {
     serverConnection?.current?.invoke('ProcessOfferAsync', id, offer.sdp);
   };
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
+    console.log('---', id);
     if (isSelf) {
       createPeerSendonly();
     } else {
       createPeerRecvonly();
     }
-
-    serverConnection?.current?.on(
-      'ProcessAnswer',
-      (connectionId, answerSDP) => {
-        if (id === connectionId) {
-          rtcPeerConnection?.current?.setRemoteDescription(
-            new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
-          );
-        }
-      }
-    );
-
-    serverConnection?.current?.on(
-      'NewOfferCreated',
-      (connectionId, answerSDP) => {
-        if (id === connectionId && !isSelf) {
-          createPeerRecvonly();
-        }
-      }
-    );
-
-    serverConnection?.current?.on('AddCandidate', (connectionId, candidate) => {
-      if (id === connectionId) {
-        const objCandidate = JSON.parse(candidate);
-        rtcPeerConnection?.current?.addIceCandidate(objCandidate);
-      }
-    });
   }, [serverConnection?.current]);
+
+  useEffect(() => {
+    if (!isSelf && sdp) {
+      rtcPeerConnection?.current?.setRemoteDescription(
+        new RTCSessionDescription({ type: 'answer', sdp })
+      );
+    }
+  }, [sdp]);
+
+  useEffect(() => {
+    if (!isSelf) createPeerRecvonly();
+  }, [offerIndex]);
+
+  useEffect(() => {
+    if (newCandidate) {
+      const objCandidate = JSON.parse(newCandidate);
+      rtcPeerConnection?.current?.addIceCandidate(objCandidate);
+    }
+  }, [candidateIndex]);
 
   useEffect(() => {
     if (isSelf) {
@@ -198,6 +203,8 @@ export const WebRTC = (props: IWebRTC) => {
     rtcPeerConnection?.current?.setLocalDescription(offer);
 
     serverConnection?.current?.invoke('ProcessOfferAsync', id, offer?.sdp);
+
+    console.log('sending offer');
 
     return rtcPeerConnection;
   };
