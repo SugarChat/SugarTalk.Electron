@@ -47,13 +47,11 @@ export const WebRTC = (props: IWebRTC) => {
     const peer = new RTCPeerConnection();
 
     peer.addEventListener('addstream', (e: any) => {
-      console.log('---adding stream----');
       videoRef.current.srcObject = e.stream;
       audioRef.current.srcObject = e.stream;
     });
 
     peer.addEventListener('icecandidate', (candidate) => {
-      console.log('---adding ice----');
       serverConnection?.current?.invoke('ProcessCandidateAsync', id, candidate);
     });
 
@@ -70,7 +68,6 @@ export const WebRTC = (props: IWebRTC) => {
   };
 
   React.useEffect(() => {
-    console.log('----starting----');
     if (isSelf) {
       createPeerSendonly();
     } else {
@@ -81,12 +78,23 @@ export const WebRTC = (props: IWebRTC) => {
       'ProcessAnswer',
       (connectionId, answerSDP) => {
         if (id === connectionId) {
-          console.log('-----answer----');
+          console.log('-----ProcessAnswer----', id);
           rtcPeerConnection?.current?.setRemoteDescription(
             new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
           );
+        }
+      }
+    );
+
+    serverConnection?.current?.on(
+      'NewOfferCreated',
+      (connectionId, answerSDP) => {
+        if (id === connectionId && !isSelf) {
+          console.log(connectionId);
+
+          createPeerRecvonly();
         } else {
-          console.log('-----answer not the same id----');
+          console.log('-----for receive----');
         }
       }
     );
@@ -100,7 +108,6 @@ export const WebRTC = (props: IWebRTC) => {
   }, [serverConnection?.current]);
 
   useEffect(() => {
-    console.log(microphoneEnabled, isSelf, audioRef.current?.srcObject);
     if (isSelf) {
       rtcPeerConnection.current?.getSenders().forEach((x) => {
         if (x.track?.kind === 'audio') {
