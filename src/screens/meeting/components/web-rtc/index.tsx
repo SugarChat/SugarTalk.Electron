@@ -31,38 +31,15 @@ export const WebRTC = (props: IWebRTC) => {
   const createPeerSendonly = async () => {
     console.log('----createPeerSendonly------', serverConnection);
 
-    const peer = new RTCPeerConnection();
-
-    peer.addEventListener('icecandidate', (candidate) => {
-      serverConnection?.current?.invoke('ProcessCandidateAsync', id, candidate);
+    recreatePeerConnection('', cameraEnabled).then((peer) => {
+      peer.current?.addEventListener('icecandidate', (candidate) => {
+        serverConnection?.current?.invoke(
+          'ProcessCandidateAsync',
+          id,
+          candidate
+        );
+      });
     });
-
-    const audioStream = await navigator.mediaDevices.getUserMedia({
-      video: false && hasVideo,
-      audio: true && hasAudio,
-    });
-
-    audioStream.getTracks().forEach((track: MediaStreamTrack) => {
-      if (track.kind === 'audio') {
-        track.enabled = microphoneEnabled;
-      } else if (track.kind === 'video') {
-        track.enabled = cameraEnabled;
-      }
-
-      peer.addTrack(track, audioStream);
-    });
-
-    const offer = await peer.createOffer({
-      offerToReceiveAudio: false,
-      offerToReceiveVideo: false,
-    });
-
-    peer.setLocalDescription(offer);
-
-    rtcPeerConnection.current = peer;
-
-    videoRef.current.srcObject = audioStream;
-    serverConnection?.current?.invoke('ProcessOfferAsync', id, offer.sdp);
   };
 
   const createPeerRecvonly = async () => {
@@ -104,9 +81,12 @@ export const WebRTC = (props: IWebRTC) => {
       'ProcessAnswer',
       (connectionId, answerSDP) => {
         if (id === connectionId) {
+          console.log('-----answer----');
           rtcPeerConnection?.current?.setRemoteDescription(
             new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
           );
+        } else {
+          console.log('-----answer not the same id----');
         }
       }
     );
@@ -154,11 +134,13 @@ export const WebRTC = (props: IWebRTC) => {
       throw 'Cannot turn on camera while in screen sharing';
     }
 
-    videoRef.current.srcObject
-      .getTracks()
-      .forEach((track: MediaStreamTrack) => {
-        track.stop();
-      });
+    if (videoRef.current?.srcObject) {
+      videoRef.current?.srcObject
+        .getTracks()
+        .forEach((track: MediaStreamTrack) => {
+          track.stop();
+        });
+    }
 
     const peer = new RTCPeerConnection();
 
@@ -217,6 +199,8 @@ export const WebRTC = (props: IWebRTC) => {
     rtcPeerConnection?.current?.setLocalDescription(offer);
 
     serverConnection?.current?.invoke('ProcessOfferAsync', id, offer?.sdp);
+
+    return rtcPeerConnection;
   };
 
   return (
