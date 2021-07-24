@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box } from '@material-ui/core';
+import { ipcRenderer } from 'electron';
 import { PageScreen } from '../../components/page-screen/index';
 import { StatusBar } from './components/status-bar';
 import * as styles from './styles';
@@ -11,10 +12,6 @@ interface IUserSession {
   id: string;
   userName: string;
   isSelf: boolean;
-  sdp: string;
-  offerIndex: number;
-  newIceCandidate: string;
-  candidateIndex: number;
 }
 
 interface IUser {
@@ -25,24 +22,18 @@ interface IUser {
 const MeetingScreen: React.FC = () => {
   const [userSessions, setUserSessions] = React.useState<IUserSession[]>([]);
 
+  const userSessionsRef = React.useRef<any>({});
+
   const [ipRendererBound, setipRendererBound] = React.useState<boolean>(false);
 
-  const {
-    serverConnection,
-    cameraEnabled,
-    setScreenSharingId,
-    screenSharingId,
-  } = React.useContext(MeetingContext);
+  const { serverConnection, setScreenSharingId, screenSharingId } =
+    React.useContext(MeetingContext);
 
   const createUserSession = (user: IUser, isSelf: boolean) => {
     const userSession: IUserSession = {
       id: user.id,
       userName: user.userName,
       isSelf,
-      sdp: '',
-      offerIndex: 0,
-      newIceCandidate: '',
-      candidateIndex: 0,
     };
 
     setUserSessions((oldUserSessions: IUserSession[]) => [
@@ -80,36 +71,37 @@ const MeetingScreen: React.FC = () => {
 
     serverConnection?.current?.on(
       'ProcessAnswer',
-      (connectionId, answerSDP: string) => {
-        const target = userSessions.find((x) => x.id === connectionId);
-        if (target) {
-          target.sdp = answerSDP;
-          setUserSessions([...userSessions]);
+      (connectionId: string, answerSDP: string) => {
+        console.log(connectionId, 'parent recv ProcessAnswer event');
+        if (userSessionsRef.current[connectionId]) {
+          userSessionsRef.current[connectionId].onProcessAnswer(answerSDP);
         }
       }
     );
 
-    serverConnection?.current?.on('NewOfferCreated', (connectionId, _) => {
-      const target = userSessions.find((x) => x.id === connectionId);
-      if (target) {
-        target.offerIndex += 1;
-        setUserSessions([...userSessions]);
+    serverConnection?.current?.on(
+      'NewOfferCreated',
+      (connectionId: string, _answerSDP) => {
+        console.log(connectionId, 'parent recv NewOfferCreated event');
+        if (userSessionsRef.current[connectionId]) {
+          userSessionsRef.current[connectionId].onNewOfferCreated();
+        }
       }
-    });
+    );
 
-    serverConnection?.current?.on('AddCandidate', (connectionId, candidate) => {
-      const target = userSessions.find((x) => x.id === connectionId);
-      if (target) {
-        target.candidateIndex += 1;
-        target.newIceCandidate = candidate;
-        setUserSessions([...userSessions]);
+    serverConnection?.current?.on(
+      'AddCandidate',
+      (connectionId: string, candidate: string) => {
+        console.log(connectionId, 'parent recv AddCandidate event');
+        if (userSessionsRef.current[connectionId]) {
+          userSessionsRef.current[connectionId].onAddCandidate(candidate);
+        }
       }
-    });
+    );
   }, [serverConnection?.current]);
 
   React.useEffect(() => {
     if (!ipRendererBound) {
-      const ipcRenderer = require('electron').ipcRenderer;
       ipcRenderer.on(
         'share-screen-selected',
         async (_e: any, screenId: string) => {
@@ -124,19 +116,18 @@ const MeetingScreen: React.FC = () => {
   return (
     <PageScreen style={styles.root}>
       <StatusBar />
+
       <Box style={styles.webRTCContainer}>
         {userSessions.map((userSession, key) => {
           return (
             <WebRTC
+              ref={(ref) => {
+                userSessionsRef.current[userSession.id] = ref;
+              }}
               key={key.toString()}
               id={userSession.id}
               userName={userSession.userName}
               isSelf={userSession.isSelf}
-              cameraEnabled={cameraEnabled}
-              sdp={userSession.sdp}
-              offerIndex={userSession.offerIndex}
-              candidateIndex={userSession.candidateIndex}
-              newCandidate={userSession.newIceCandidate}
             />
           );
         })}

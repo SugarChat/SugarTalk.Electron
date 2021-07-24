@@ -7,23 +7,10 @@ interface IWebRTC {
   id: string;
   userName: string;
   isSelf: boolean;
-  cameraEnabled: boolean;
-  sdp: string;
-  offerIndex: number;
-  candidateIndex: number;
-  newCandidate: string;
 }
 
-export const WebRTC = (props: IWebRTC) => {
-  const {
-    id,
-    userName = 'unknown',
-    isSelf,
-    sdp,
-    offerIndex,
-    candidateIndex,
-    newCandidate,
-  } = props;
+export const WebRTC = React.forwardRef((props: IWebRTC, ref) => {
+  const { id, userName = 'unknown', isSelf } = props;
 
   const videoRef = React.useRef<any>();
 
@@ -39,96 +26,6 @@ export const WebRTC = (props: IWebRTC) => {
     hasAudio,
     screenSharingId,
   } = React.useContext(MeetingContext);
-
-  const createPeerSendonly = async () => {
-    recreatePeerConnection('', cameraEnabled).then((peer) => {
-      peer.current?.addEventListener('icecandidate', (candidate) => {
-        serverConnection?.current?.invoke(
-          'ProcessCandidateAsync',
-          id,
-          candidate
-        );
-      });
-    });
-  };
-
-  const createPeerRecvonly = async () => {
-    const peer = new RTCPeerConnection();
-
-    peer.addEventListener('addstream', (e: any) => {
-      videoRef.current.srcObject = e.stream;
-      audioRef.current.srcObject = e.stream;
-    });
-
-    peer.addEventListener('icecandidate', (candidate) => {
-      serverConnection?.current?.invoke('ProcessCandidateAsync', id, candidate);
-    });
-
-    const offer = await peer.createOffer({
-      offerToReceiveAudio: true,
-      offerToReceiveVideo: true,
-    });
-
-    peer.setLocalDescription(offer);
-
-    rtcPeerConnection.current = peer;
-
-    serverConnection?.current?.invoke('ProcessOfferAsync', id, offer.sdp);
-  };
-
-  React.useLayoutEffect(() => {
-    console.log('---', id);
-    if (isSelf) {
-      createPeerSendonly();
-    } else {
-      createPeerRecvonly();
-    }
-  }, [serverConnection?.current]);
-
-  useEffect(() => {
-    if (!isSelf && sdp) {
-      rtcPeerConnection?.current?.setRemoteDescription(
-        new RTCSessionDescription({ type: 'answer', sdp })
-      );
-    }
-  }, [sdp]);
-
-  useEffect(() => {
-    if (!isSelf) createPeerRecvonly();
-  }, [offerIndex]);
-
-  useEffect(() => {
-    if (newCandidate) {
-      const objCandidate = JSON.parse(newCandidate);
-      rtcPeerConnection?.current?.addIceCandidate(objCandidate);
-    }
-  }, [candidateIndex]);
-
-  useEffect(() => {
-    if (isSelf) {
-      rtcPeerConnection.current?.getSenders().forEach((x) => {
-        if (x.track?.kind === 'audio') {
-          x.track.enabled = microphoneEnabled;
-        }
-      });
-    }
-  }, [microphoneEnabled]);
-
-  useEffect(() => {
-    if (isSelf && videoRef.current?.srcObject) {
-      recreatePeerConnection('', cameraEnabled);
-    }
-  }, [cameraEnabled]);
-
-  useEffect(() => {
-    setupScreenSharing();
-  }, [screenSharingId]);
-
-  const setupScreenSharing = async () => {
-    if (screenSharingId && isSelf) {
-      await recreatePeerConnection(screenSharingId, false);
-    }
-  };
 
   const recreatePeerConnection = async (
     screenId: string,
@@ -209,6 +106,99 @@ export const WebRTC = (props: IWebRTC) => {
     return rtcPeerConnection;
   };
 
+  const createPeerSendonly = async () => {
+    recreatePeerConnection('', cameraEnabled).then((peer) => {
+      peer.current?.addEventListener('icecandidate', (candidate) => {
+        serverConnection?.current?.invoke(
+          'ProcessCandidateAsync',
+          id,
+          candidate
+        );
+      });
+    });
+  };
+
+  const createPeerRecvonly = async () => {
+    const peer = new RTCPeerConnection();
+
+    peer.addEventListener('addstream', (e: any) => {
+      videoRef.current.srcObject = e.stream;
+      audioRef.current.srcObject = e.stream;
+    });
+
+    peer.addEventListener('icecandidate', (candidate) => {
+      serverConnection?.current?.invoke('ProcessCandidateAsync', id, candidate);
+    });
+
+    const offer = await peer.createOffer({
+      offerToReceiveAudio: true,
+      offerToReceiveVideo: true,
+    });
+
+    peer.setLocalDescription(offer);
+
+    rtcPeerConnection.current = peer;
+
+    serverConnection?.current?.invoke('ProcessOfferAsync', id, offer.sdp);
+  };
+
+  React.useLayoutEffect(() => {
+    console.log('---', id);
+    if (isSelf) {
+      createPeerSendonly();
+    } else {
+      createPeerRecvonly();
+    }
+  }, [serverConnection?.current]);
+
+  useEffect(() => {
+    if (isSelf) {
+      rtcPeerConnection.current?.getSenders().forEach((x) => {
+        if (x.track?.kind === 'audio') {
+          x.track.enabled = microphoneEnabled;
+        }
+      });
+    }
+  }, [microphoneEnabled]);
+
+  useEffect(() => {
+    if (isSelf && videoRef.current?.srcObject) {
+      recreatePeerConnection('', cameraEnabled);
+    }
+  }, [cameraEnabled]);
+
+  const setupScreenSharing = async () => {
+    if (screenSharingId && isSelf) {
+      await recreatePeerConnection(screenSharingId, false);
+    }
+  };
+
+  useEffect(() => {
+    setupScreenSharing();
+  }, [screenSharingId]);
+
+  React.useImperativeHandle(ref, () => ({
+    onProcessAnswer(answerSDP: any) {
+      console.log(id, 'onProcessAnswer');
+      rtcPeerConnection?.current?.setRemoteDescription(
+        new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
+      );
+    },
+
+    onNewOfferCreated() {
+      console.log(id, 'onNewOfferCreated');
+      if (!isSelf) {
+        createPeerRecvonly();
+      }
+    },
+
+    onAddCandidate(candidate: any) {
+      console.log(id, 'onAddCandidate');
+      const objCandidate = JSON.parse(candidate);
+      rtcPeerConnection?.current?.addIceCandidate(objCandidate);
+    },
+  }));
+
   return (
     <Box component="div" style={styles.videoContainer}>
       <video
@@ -225,4 +215,6 @@ export const WebRTC = (props: IWebRTC) => {
       </Box>
     </Box>
   );
-};
+});
+
+WebRTC.displayName = 'WebRTC';
