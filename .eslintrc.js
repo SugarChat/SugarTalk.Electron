@@ -12,6 +12,7 @@ module.exports = {
     'react/prop-types': 'off',
     'react/jsx-props-no-spreading': 'off',
     'jsx-a11y/media-has-caption': 'off',
+    'react/display-name': 'off',
   },
   parserOptions: {
     ecmaVersion: 2020,

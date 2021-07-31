@@ -18,49 +18,41 @@ export interface IMeetingInfo {
 }
 
 interface IMeetingContextValue {
-  toggleCamera: React.Dispatch<React.SetStateAction<boolean>>;
-  toggleMicrophone: React.Dispatch<React.SetStateAction<boolean>>;
-  setScreenSharingId: (screenId: string) => void;
-  setCurrentConnectionId: (connectionId: string) => void;
   serverConnection:
     | React.MutableRefObject<HubConnection | undefined>
     | undefined;
   hasVideo: boolean;
   hasAudio: boolean;
   meetingNumber: string;
-  cameraEnabled: boolean;
-  microphoneEnabled: boolean;
-  screenSharingId: string;
-  currentConnectionId: string;
+  audio: boolean;
+  setAudio: React.Dispatch<React.SetStateAction<boolean>>;
+  video: boolean;
+  setVideo: React.Dispatch<React.SetStateAction<boolean>>;
+  screen: boolean;
+  setScreen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export const MeetingContext = React.createContext<IMeetingContextValue>({
-  toggleCamera: () => {},
-  toggleMicrophone: () => {},
-  setScreenSharingId: (screenId: string) => {},
-  setCurrentConnectionId: (connectionId: string) => {},
   serverConnection: undefined,
   hasVideo: false,
   hasAudio: false,
   meetingNumber: '',
-  cameraEnabled: false,
-  microphoneEnabled: false,
-  screenSharingId: '',
-  currentConnectionId: '',
+  audio: false,
+  setAudio: () => {},
+  video: false,
+  setVideo: () => {},
+  screen: false,
+  setScreen: () => {},
 });
 
 export const MeetingProvider: React.FC = ({ children }) => {
-  const [cameraEnabled, toggleCamera] = React.useState<boolean>(true);
-  const [microphoneEnabled, toggleMicrophone] = React.useState<boolean>(true);
-  const [screenSharingId, setScreenSharingId] = React.useState<string>('');
-
+  const [audio, setAudio] = React.useState<boolean>(false);
+  const [video, setVideo] = React.useState<boolean>(false);
+  const [screen, setScreen] = React.useState<boolean>(false);
   const [hasVideo, setHasVideo] = React.useState<boolean>(true);
   const [hasAudio, setHasAudio] = React.useState<boolean>(true);
   const [meetingNumber, setMeetingNumber] = React.useState<string>('');
   const serverConnection = React.useRef<HubConnection>();
-  const [currentConnectionId, setCurrentConnectionId] =
-    React.useState<string>('');
-
   const location = useLocation();
   const { userStore } = useStores();
 
@@ -80,11 +72,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
       setHasVideo(hasCamera);
       setHasAudio(hasMicrophone);
-
-      toggleCamera((meetingInfo.connectedWithVideo as boolean) && hasCamera);
-      toggleMicrophone(
-        (meetingInfo.connectedWithAudio as boolean) && hasMicrophone
-      );
     };
 
     initMediaDeviceStatus();
@@ -118,18 +105,16 @@ export const MeetingProvider: React.FC = ({ children }) => {
   return (
     <MeetingContext.Provider
       value={{
-        toggleCamera,
-        toggleMicrophone,
-        setScreenSharingId,
-        setCurrentConnectionId,
         serverConnection,
         hasVideo,
         hasAudio,
         meetingNumber,
-        cameraEnabled,
-        microphoneEnabled,
-        screenSharingId,
-        currentConnectionId,
+        audio,
+        setAudio,
+        video,
+        setVideo,
+        screen,
+        setScreen,
       }}
     >
       {children && children}

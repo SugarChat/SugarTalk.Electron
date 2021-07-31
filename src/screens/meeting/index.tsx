@@ -1,11 +1,10 @@
 import React from 'react';
 import { Box } from '@material-ui/core';
-import { ipcRenderer } from 'electron';
 import { PageScreen } from '../../components/page-screen/index';
 import { StatusBar } from './components/status-bar';
 import * as styles from './styles';
 import { FooterToolbar } from './components/footer-toolbar';
-import { WebRTC } from './components/web-rtc';
+import { IWebRTCRef, WebRTC } from './components/web-rtc';
 import { MeetingContext, MeetingProvider } from './context';
 
 interface IUserSession {
@@ -19,15 +18,16 @@ interface IUser {
   userName: string;
 }
 
-const MeetingScreen: React.FC = () => {
+const MeetingScreen: React.FC = React.memo(() => {
   const [userSessions, setUserSessions] = React.useState<IUserSession[]>([]);
 
-  const userSessionsRef = React.useRef<any>({});
+  const userSessionsRef = React.useRef<Record<string, IWebRTCRef>>({});
 
-  const [ipRendererBound, setipRendererBound] = React.useState<boolean>(false);
+  const { serverConnection } = React.useContext(MeetingContext);
 
-  const { serverConnection, setScreenSharingId, screenSharingId } =
-    React.useContext(MeetingContext);
+  const selfUserSession = React.useMemo(() => {
+    return userSessions.find((userSession) => userSession.isSelf === true);
+  }, [userSessions]);
 
   const createUserSession = (user: IUser, isSelf: boolean) => {
     const userSession: IUserSession = {
@@ -72,19 +72,23 @@ const MeetingScreen: React.FC = () => {
     serverConnection?.current?.on(
       'ProcessAnswer',
       (connectionId: string, answerSDP: string) => {
-        console.log(connectionId, 'parent recv ProcessAnswer event');
         if (userSessionsRef.current[connectionId]) {
-          userSessionsRef.current[connectionId].onProcessAnswer(answerSDP);
+          userSessionsRef.current[connectionId].onProcessAnswer(
+            connectionId,
+            answerSDP
+          );
         }
       }
     );
 
     serverConnection?.current?.on(
       'NewOfferCreated',
-      (connectionId: string, _answerSDP) => {
-        console.log(connectionId, 'parent recv NewOfferCreated event');
+      (connectionId: string, answerSDP: string) => {
         if (userSessionsRef.current[connectionId]) {
-          userSessionsRef.current[connectionId].onNewOfferCreated();
+          userSessionsRef.current[connectionId].onNewOfferCreated(
+            connectionId,
+            answerSDP
+          );
         }
       }
     );
@@ -92,26 +96,27 @@ const MeetingScreen: React.FC = () => {
     serverConnection?.current?.on(
       'AddCandidate',
       (connectionId: string, candidate: string) => {
-        console.log(connectionId, 'parent recv AddCandidate event');
         if (userSessionsRef.current[connectionId]) {
-          userSessionsRef.current[connectionId].onAddCandidate(candidate);
+          userSessionsRef.current[connectionId].onAddCandidate(
+            connectionId,
+            candidate
+          );
         }
       }
     );
   }, [serverConnection?.current]);
 
-  React.useEffect(() => {
-    if (!ipRendererBound) {
-      ipcRenderer.on(
-        'share-screen-selected',
-        async (_e: any, screenId: string) => {
-          setScreenSharingId(screenId);
-          console.log(screenId);
-        }
-      );
-      setipRendererBound(true);
+  const toggleVideo = () => {
+    if (selfUserSession) {
+      userSessionsRef.current[selfUserSession.id].toggleVideo();
     }
-  }, [screenSharingId]);
+  };
+
+  const toggleScreen = (screenId?: string) => {
+    if (selfUserSession) {
+      userSessionsRef.current[selfUserSession.id].toggleScreen(screenId);
+    }
+  };
 
   return (
     <PageScreen style={styles.root}>
@@ -121,7 +126,7 @@ const MeetingScreen: React.FC = () => {
         {userSessions.map((userSession, key) => {
           return (
             <WebRTC
-              ref={(ref) => {
+              ref={(ref: IWebRTCRef) => {
                 userSessionsRef.current[userSession.id] = ref;
               }}
               key={key.toString()}
@@ -133,10 +138,10 @@ const MeetingScreen: React.FC = () => {
         })}
       </Box>
 
-      <FooterToolbar />
+      <FooterToolbar toggleVideo={toggleVideo} toggleScreen={toggleScreen} />
     </PageScreen>
   );
-};
+});
 
 export const Meeting = () => (
   <MeetingProvider>

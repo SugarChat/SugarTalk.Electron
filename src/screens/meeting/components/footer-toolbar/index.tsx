@@ -3,19 +3,19 @@ import React from 'react';
 import MicIcon from '@material-ui/icons/Mic';
 import VideocamIcon from '@material-ui/icons/Videocam';
 import ScreenShareIcon from '@material-ui/icons/ScreenShare';
+import StopScreenShareIcon from '@material-ui/icons/StopScreenShare';
 import MicOffIcon from '@material-ui/icons/MicOff';
 import VideocamOffIcon from '@material-ui/icons/VideocamOff';
-import electron from 'electron';
+import electron, { ipcRenderer } from 'electron';
 import * as styles from './styles';
 import { MeetingContext } from '../../context';
-import { getMediaDeviceAccessAndStatus } from '../../../../utils/media';
 
 interface IToolbarButton extends ButtonProps {
   text: string;
   icon: React.ReactElement;
 }
 
-const ToolbarButton = (props: IToolbarButton) => {
+const ToolbarButton = React.memo((props: IToolbarButton) => {
   const { text, icon, ...rest } = props;
 
   const CButton = withStyles({
@@ -32,50 +32,66 @@ const ToolbarButton = (props: IToolbarButton) => {
       </Grid>
     </CButton>
   );
-};
+});
 
-export const FooterToolbar = () => {
-  const { cameraEnabled, toggleCamera, microphoneEnabled, toggleMicrophone } =
-    React.useContext(MeetingContext);
+interface IFooterToolBar {
+  toggleVideo: () => void;
+  toggleScreen: (screenId?: string) => void;
+}
 
-  const toggleVideo = async () => {
-    if (cameraEnabled) {
-      toggleCamera(false);
-    } else {
-      const status = await getMediaDeviceAccessAndStatus('camera', true);
-      toggleCamera(status);
-    }
-  };
+export const FooterToolbar = React.memo((props: IFooterToolBar) => {
+  const { toggleVideo, toggleScreen } = props;
 
-  const toggleVoice = async () => {
-    if (microphoneEnabled) {
-      toggleMicrophone(false);
-    } else {
-      const status = await getMediaDeviceAccessAndStatus('microphone', true);
-      toggleMicrophone(status);
-    }
-  };
+  const { audio, video, screen } = React.useContext(MeetingContext);
+
+  React.useEffect(() => {
+    const onShareScreenSelected = (_e: unknown, screenId: string) => {
+      toggleScreen(screenId);
+    };
+
+    ipcRenderer.on('share-screen-selected', onShareScreenSelected);
+
+    return () => {
+      ipcRenderer.removeListener(
+        'share-screen-selected',
+        onShareScreenSelected
+      );
+    };
+  }, [toggleScreen]);
 
   const onCloseMeeting = () => {
     electron.remote.getCurrentWindow().close();
   };
 
-  const onShareScreenClicked = () => {
-    const meetingWindow = new electron.remote.BrowserWindow({
+  const showScreenSelector = () => {
+    const selectorWindow = new electron.remote.BrowserWindow({
       show: true,
       width: 880,
       height: 620,
       movable: true,
       modal: true,
+      focusable: true,
       webPreferences: {
         nodeIntegration: true,
         enableRemoteModule: true,
       },
     });
 
+    selectorWindow.on('blur', () => {
+      selectorWindow.focus();
+    });
+
     const currentWindow = electron.remote.getCurrentWindow();
-    meetingWindow.setParentWindow(currentWindow);
-    meetingWindow.loadURL(`file://${__dirname}/index.html#/ScreenSelector`);
+    selectorWindow.setParentWindow(currentWindow);
+    selectorWindow.loadURL(`file://${__dirname}/index.html#/ScreenSelector`);
+  };
+
+  const onShareScreen = () => {
+    if (screen) {
+      toggleScreen();
+    } else {
+      showScreenSelector();
+    }
   };
 
   return (
@@ -84,23 +100,23 @@ export const FooterToolbar = () => {
         <Grid item container xs={6} justifyContent="flex-start" spacing={1}>
           <Grid item>
             <ToolbarButton
-              onClick={toggleVoice}
-              text={microphoneEnabled ? '静音' : '解除静音'}
-              icon={microphoneEnabled ? <MicIcon /> : <MicOffIcon />}
+              onClick={() => undefined}
+              text={audio ? '静音' : '解除静音'}
+              icon={audio ? <MicIcon /> : <MicOffIcon />}
             />
           </Grid>
           <Grid item>
             <ToolbarButton
               onClick={toggleVideo}
-              text={cameraEnabled ? '关闭视频' : '开启视频'}
-              icon={cameraEnabled ? <VideocamIcon /> : <VideocamOffIcon />}
+              text={video ? '关闭视频' : '开启视频'}
+              icon={video ? <VideocamIcon /> : <VideocamOffIcon />}
             />
           </Grid>
           <Grid item>
             <ToolbarButton
-              onClick={onShareScreenClicked}
-              text="共享屏幕"
-              icon={<ScreenShareIcon />}
+              onClick={onShareScreen}
+              text={screen ? '停止共享屏幕' : '共享屏幕'}
+              icon={screen ? <ScreenShareIcon /> : <StopScreenShareIcon />}
             />
           </Grid>
         </Grid>
@@ -118,4 +134,4 @@ export const FooterToolbar = () => {
       </Grid>
     </Box>
   );
-};
+});
