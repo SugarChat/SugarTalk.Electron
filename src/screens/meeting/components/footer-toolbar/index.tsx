@@ -64,25 +64,22 @@ export const FooterToolbar = React.memo((props: IFooterToolBar) => {
   };
 
   const showScreenSelector = () => {
+    const currentWindow = electron.remote.getCurrentWindow();
     const selectorWindow = new electron.remote.BrowserWindow({
       show: true,
       width: 880,
       height: 620,
       movable: true,
       modal: true,
+      parent: currentWindow,
       focusable: true,
+      resizable: false,
+      minimizable: false,
       webPreferences: {
         nodeIntegration: true,
         enableRemoteModule: true,
       },
     });
-
-    selectorWindow.on('blur', () => {
-      selectorWindow.focus();
-    });
-
-    const currentWindow = electron.remote.getCurrentWindow();
-    selectorWindow.setParentWindow(currentWindow);
     selectorWindow.loadURL(`file://${__dirname}/index.html#/ScreenSelector`);
   };
 
