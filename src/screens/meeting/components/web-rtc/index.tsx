@@ -80,14 +80,13 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
       audio: true,
     });
 
-    videoRef.current.srcObject = stream;
-
     stream.getTracks().forEach((track: MediaStreamTrack) => {
-      if (track.kind === 'audio') {
-        track.enabled = audio;
-      }
+      // TODO: should change enabled status by useEffect
+      if (track.kind === 'audio') track.enabled = audio;
       peer.addTrack(track, stream);
     });
+
+    videoRef.current.srcObject = stream;
 
     const offer = await peer.createOffer({
       offerToReceiveAudio: false,
@@ -122,17 +121,11 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
     const peer = new RTCPeerConnection();
 
     stream.getTracks().forEach((track: MediaStreamTrack) => {
-      if (track.kind === 'audio') {
-        track.enabled = audio;
-      }
       peer.addTrack(track, stream);
     });
 
     if (screenStream) {
       screenStream.getTracks().forEach((track: MediaStreamTrack) => {
-        if (track.kind === 'audio') {
-          track.enabled = audio;
-        }
         stream.addTrack(track);
         peer.addTrack(track, screenStream);
       });
@@ -261,7 +254,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
           track.enabled = audio;
         });
     }
-  }, [audio, isSelf]);
+  }, [audio, isSelf, videoRef.current?.srcObject]);
 
   return (
     <Box component="div" style={styles.videoContainer}>
