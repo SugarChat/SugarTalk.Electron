@@ -27,8 +27,15 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
 
   const rtcPeerConnection = React.useRef<RTCPeerConnection>();
 
-  const { serverConnection, video, setVideo, screen, setScreen } =
-    React.useContext(MeetingContext);
+  const {
+    serverConnection,
+    audio,
+    video,
+    setVideo,
+    screen,
+    setScreen,
+    setScreenSelecting,
+  } = React.useContext(MeetingContext);
 
   // 创建接受端
   const createPeerRecvonly = async () => {
@@ -76,6 +83,9 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
     videoRef.current.srcObject = stream;
 
     stream.getTracks().forEach((track: MediaStreamTrack) => {
+      if (track.kind === 'audio') {
+        track.enabled = audio;
+      }
       peer.addTrack(track, stream);
     });
 
@@ -112,11 +122,17 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
     const peer = new RTCPeerConnection();
 
     stream.getTracks().forEach((track: MediaStreamTrack) => {
+      if (track.kind === 'audio') {
+        track.enabled = audio;
+      }
       peer.addTrack(track, stream);
     });
 
     if (screenStream) {
       screenStream.getTracks().forEach((track: MediaStreamTrack) => {
+        if (track.kind === 'audio') {
+          track.enabled = audio;
+        }
         stream.addTrack(track);
         peer.addTrack(track, screenStream);
       });
@@ -171,9 +187,11 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
 
   // 共享屏幕
   const toggleScreen = useLockFn(async (screenId?: string) => {
+    setScreenSelecting(true);
     if (screen) {
       await resumePeerSendonly();
       setScreen(false);
+      setScreenSelecting(false);
     } else {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: false,
@@ -197,6 +215,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
         await recreatePeerSendonly(stream, screenStream);
         setScreen(true);
         setVideo(false);
+        setScreenSelecting(false);
       }
     }
   });
@@ -233,6 +252,16 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
       createPeerRecvonly();
     }
   }, [serverConnection?.current]);
+
+  React.useEffect(() => {
+    if (isSelf && videoRef.current?.srcObject) {
+      videoRef.current.srcObject
+        .getAudioTracks()
+        .forEach((track: MediaStreamTrack) => {
+          track.enabled = audio;
+        });
+    }
+  }, [audio, isSelf]);
 
   return (
     <Box component="div" style={styles.videoContainer}>

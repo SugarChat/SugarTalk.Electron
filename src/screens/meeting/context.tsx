@@ -30,6 +30,8 @@ interface IMeetingContextValue {
   setVideo: React.Dispatch<React.SetStateAction<boolean>>;
   screen: boolean;
   setScreen: React.Dispatch<React.SetStateAction<boolean>>;
+  screenSelecting: boolean;
+  setScreenSelecting: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export const MeetingContext = React.createContext<IMeetingContextValue>({
@@ -43,12 +45,15 @@ export const MeetingContext = React.createContext<IMeetingContextValue>({
   setVideo: () => {},
   screen: false,
   setScreen: () => {},
+  screenSelecting: false,
+  setScreenSelecting: () => {},
 });
 
 export const MeetingProvider: React.FC = ({ children }) => {
   const [audio, setAudio] = React.useState<boolean>(false);
   const [video, setVideo] = React.useState<boolean>(false);
   const [screen, setScreen] = React.useState<boolean>(false);
+  const [screenSelecting, setScreenSelecting] = React.useState<boolean>(false);
   const [hasVideo, setHasVideo] = React.useState<boolean>(true);
   const [hasAudio, setHasAudio] = React.useState<boolean>(true);
   const [meetingNumber, setMeetingNumber] = React.useState<string>('');
@@ -115,6 +120,8 @@ export const MeetingProvider: React.FC = ({ children }) => {
         setVideo,
         screen,
         setScreen,
+        screenSelecting,
+        setScreenSelecting,
       }}
     >
       {children && children}

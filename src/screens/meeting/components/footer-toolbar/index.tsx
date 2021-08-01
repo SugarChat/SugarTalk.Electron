@@ -9,6 +9,7 @@ import VideocamOffIcon from '@material-ui/icons/VideocamOff';
 import electron, { ipcRenderer } from 'electron';
 import * as styles from './styles';
 import { MeetingContext } from '../../context';
+import { getMediaDeviceAccessAndStatus } from '../../../../utils/media';
 
 interface IToolbarButton extends ButtonProps {
   text: string;
@@ -42,7 +43,8 @@ interface IFooterToolBar {
 export const FooterToolbar = React.memo((props: IFooterToolBar) => {
   const { toggleVideo, toggleScreen } = props;
 
-  const { audio, video, screen } = React.useContext(MeetingContext);
+  const { audio, setAudio, video, screen, screenSelecting } =
+    React.useContext(MeetingContext);
 
   React.useEffect(() => {
     const onShareScreenSelected = (_e: unknown, screenId: string) => {
@@ -91,26 +93,38 @@ export const FooterToolbar = React.memo((props: IFooterToolBar) => {
     }
   };
 
+  const onVideo = async () => {
+    const status = await getMediaDeviceAccessAndStatus('camera', true);
+    if (status) {
+      toggleVideo();
+    }
+  };
+
+  const onAudio = () => {
+    setAudio(!audio);
+  };
+
   return (
     <Box style={styles.footerToolbarContainer}>
       <Grid container direction="row">
         <Grid item container xs={6} justifyContent="flex-start" spacing={1}>
           <Grid item>
             <ToolbarButton
-              onClick={() => undefined}
+              onClick={onAudio}
               text={audio ? '静音' : '解除静音'}
               icon={audio ? <MicIcon /> : <MicOffIcon />}
             />
           </Grid>
           <Grid item>
             <ToolbarButton
-              onClick={toggleVideo}
+              onClick={onVideo}
               text={video ? '关闭视频' : '开启视频'}
               icon={video ? <VideocamIcon /> : <VideocamOffIcon />}
             />
           </Grid>
           <Grid item>
             <ToolbarButton
+              disabled={screenSelecting}
               onClick={onShareScreen}
               text={screen ? '停止共享屏幕' : '共享屏幕'}
               icon={screen ? <ScreenShareIcon /> : <StopScreenShareIcon />}
