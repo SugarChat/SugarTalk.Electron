@@ -21,8 +21,6 @@ interface IMeetingContextValue {
   serverConnection:
     | React.MutableRefObject<HubConnection | undefined>
     | undefined;
-  hasVideo: boolean;
-  hasAudio: boolean;
   meetingNumber: string;
   audio: boolean;
   setAudio: React.Dispatch<React.SetStateAction<boolean>>;
@@ -36,8 +34,6 @@ interface IMeetingContextValue {
 
 export const MeetingContext = React.createContext<IMeetingContextValue>({
   serverConnection: undefined,
-  hasVideo: false,
-  hasAudio: false,
   meetingNumber: '',
   audio: false,
   setAudio: () => {},
@@ -54,8 +50,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const [video, setVideo] = React.useState<boolean>(false);
   const [screen, setScreen] = React.useState<boolean>(false);
   const [screenSelecting, setScreenSelecting] = React.useState<boolean>(false);
-  const [hasVideo, setHasVideo] = React.useState<boolean>(true);
-  const [hasAudio, setHasAudio] = React.useState<boolean>(true);
   const [meetingNumber, setMeetingNumber] = React.useState<string>('');
   const serverConnection = React.useRef<HubConnection>();
   const location = useLocation();
@@ -67,19 +61,16 @@ export const MeetingProvider: React.FC = ({ children }) => {
     }) as unknown as IMeetingInfo;
 
     const initMediaDeviceStatus = async () => {
-      const hasCamera = await getMediaDeviceAccessAndStatus('camera');
       const hasMicrophone = await getMediaDeviceAccessAndStatus('microphone');
-
-      if (hasCamera === false && hasMicrophone === false) {
+      if (hasMicrophone === false) {
         showRequestMediaAccessDialog();
         electron.remote.getCurrentWindow().close();
       }
-
-      setHasVideo(hasCamera);
-      setHasAudio(hasMicrophone);
     };
 
     initMediaDeviceStatus();
+
+    setAudio(meetingInfo.connectedWithAudio);
 
     setMeetingNumber(meetingInfo.meetingId);
 
@@ -111,8 +102,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
     <MeetingContext.Provider
       value={{
         serverConnection,
-        hasVideo,
-        hasAudio,
         meetingNumber,
         audio,
         setAudio,
