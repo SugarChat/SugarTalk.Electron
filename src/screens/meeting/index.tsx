@@ -4,7 +4,7 @@ import { PageScreen } from '../../components/page-screen/index';
 import { StatusBar } from './components/status-bar';
 import * as styles from './styles';
 import { FooterToolbar } from './components/footer-toolbar';
-import { WebRTC } from './components/web-rtc';
+import { IWebRTCRef, WebRTC } from './components/web-rtc';
 import { MeetingContext, MeetingProvider } from './context';
 
 interface IUserSession {
@@ -18,17 +18,16 @@ interface IUser {
   userName: string;
 }
 
-const MeetingScreen: React.FC = () => {
+const MeetingScreen: React.FC = React.memo(() => {
   const [userSessions, setUserSessions] = React.useState<IUserSession[]>([]);
 
-  const [ipRendererBound, setipRendererBound] = React.useState<boolean>(false);
+  const userSessionsRef = React.useRef<Record<string, IWebRTCRef>>({});
 
-  const {
-    serverConnection,
-    cameraEnabled,
-    setScreenSharingId,
-    screenSharingId,
-  } = React.useContext(MeetingContext);
+  const { serverConnection } = React.useContext(MeetingContext);
+
+  const selfUserSession = React.useMemo(() => {
+    return userSessions.find((userSession) => userSession.isSelf === true);
+  }, [userSessions]);
 
   const createUserSession = (user: IUser, isSelf: boolean) => {
     const userSession: IUserSession = {
@@ -69,43 +68,80 @@ const MeetingScreen: React.FC = () => {
     serverConnection?.current?.on('OtherLeft', (connectionId: string) => {
       removeUserSession(connectionId);
     });
+
+    serverConnection?.current?.on(
+      'ProcessAnswer',
+      (connectionId: string, answerSDP: string) => {
+        if (userSessionsRef.current[connectionId]) {
+          userSessionsRef.current[connectionId].onProcessAnswer(
+            connectionId,
+            answerSDP
+          );
+        }
+      }
+    );
+
+    serverConnection?.current?.on(
+      'NewOfferCreated',
+      (connectionId: string, answerSDP: string) => {
+        if (userSessionsRef.current[connectionId]) {
+          userSessionsRef.current[connectionId].onNewOfferCreated(
+            connectionId,
+            answerSDP
+          );
+        }
+      }
+    );
+
+    serverConnection?.current?.on(
+      'AddCandidate',
+      (connectionId: string, candidate: string) => {
+        if (userSessionsRef.current[connectionId]) {
+          userSessionsRef.current[connectionId].onAddCandidate(
+            connectionId,
+            candidate
+          );
+        }
+      }
+    );
   }, [serverConnection?.current]);
 
-  React.useEffect(() => {
-    if (!ipRendererBound) {
-      const ipcRenderer = require('electron').ipcRenderer;
-      ipcRenderer.on(
-        'share-screen-selected',
-        async (_e: any, screenId: string) => {
-          setScreenSharingId(screenId);
-          console.log(screenId);
-        }
-      );
-      setipRendererBound(true);
+  const toggleVideo = () => {
+    if (selfUserSession) {
+      userSessionsRef.current[selfUserSession.id].toggleVideo();
     }
-  }, [screenSharingId]);
+  };
+
+  const toggleScreen = (screenId?: string) => {
+    if (selfUserSession) {
+      userSessionsRef.current[selfUserSession.id].toggleScreen(screenId);
+    }
+  };
 
   return (
     <PageScreen style={styles.root}>
       <StatusBar />
+
       <Box style={styles.webRTCContainer}>
         {userSessions.map((userSession, key) => {
           return (
             <WebRTC
+              ref={(ref: IWebRTCRef) => {
+                userSessionsRef.current[userSession.id] = ref;
+              }}
               key={key.toString()}
               id={userSession.id}
               userName={userSession.userName}
               isSelf={userSession.isSelf}
-              cameraEnabled={cameraEnabled}
             />
           );
         })}
       </Box>
 
-      <FooterToolbar />
+      <FooterToolbar toggleVideo={toggleVideo} toggleScreen={toggleScreen} />
     </PageScreen>
   );
-};
+});
 
 export const Meeting = () => (
   <MeetingProvider>

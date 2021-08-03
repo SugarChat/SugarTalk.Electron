@@ -1,5 +1,6 @@
 import { Box } from '@material-ui/core';
-import React, { useEffect } from 'react';
+import { useLockFn } from 'ahooks';
+import React from 'react';
 import { MeetingContext } from '../../context';
 import * as styles from './styles';
 
@@ -7,10 +8,17 @@ interface IWebRTC {
   id: string;
   userName: string;
   isSelf: boolean;
-  cameraEnabled: boolean;
 }
 
-export const WebRTC = (props: IWebRTC) => {
+export interface IWebRTCRef {
+  onProcessAnswer: (connectionId: string, answerSDP: string) => void;
+  onAddCandidate: (connectionId: string, candidate: string) => void;
+  onNewOfferCreated: (connectionId: string, answerSDP: string) => void;
+  toggleVideo: () => void;
+  toggleScreen: (screenId?: string) => void;
+}
+
+export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
   const { id, userName = 'unknown', isSelf } = props;
 
   const videoRef = React.useRef<any>();
@@ -20,26 +28,16 @@ export const WebRTC = (props: IWebRTC) => {
   const rtcPeerConnection = React.useRef<RTCPeerConnection>();
 
   const {
-    cameraEnabled,
-    microphoneEnabled,
     serverConnection,
-    hasVideo,
-    hasAudio,
-    screenSharingId,
+    audio,
+    video,
+    setVideo,
+    screen,
+    setScreen,
+    setScreenSelecting,
   } = React.useContext(MeetingContext);
 
-  const createPeerSendonly = async () => {
-    recreatePeerConnection('', cameraEnabled).then((peer) => {
-      peer.current?.addEventListener('icecandidate', (candidate) => {
-        serverConnection?.current?.invoke(
-          'ProcessCandidateAsync',
-          id,
-          candidate
-        );
-      });
-    });
-  };
-
+  // 创建接受端
   const createPeerRecvonly = async () => {
     const peer = new RTCPeerConnection();
 
@@ -57,82 +55,61 @@ export const WebRTC = (props: IWebRTC) => {
       offerToReceiveVideo: true,
     });
 
-    peer.setLocalDescription(offer);
+    await peer.setLocalDescription(offer);
 
     rtcPeerConnection.current = peer;
 
-    serverConnection?.current?.invoke('ProcessOfferAsync', id, offer.sdp);
+    await serverConnection?.current?.invoke(
+      'ProcessOfferAsync',
+      id,
+      offer.sdp,
+      false
+    );
   };
 
-  React.useEffect(() => {
-    if (isSelf) {
-      createPeerSendonly();
-    } else {
-      createPeerRecvonly();
-    }
+  // 创建发送端
+  const createPeerSendonly = async () => {
+    const peer = new RTCPeerConnection();
 
-    serverConnection?.current?.on(
-      'ProcessAnswer',
-      (connectionId, answerSDP) => {
-        if (id === connectionId) {
-          rtcPeerConnection?.current?.setRemoteDescription(
-            new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
-          );
-        }
-      }
-    );
-
-    serverConnection?.current?.on(
-      'NewOfferCreated',
-      (connectionId, answerSDP) => {
-        if (id === connectionId && !isSelf) {
-          createPeerRecvonly();
-        }
-      }
-    );
-
-    serverConnection?.current?.on('AddCandidate', (connectionId, candidate) => {
-      if (id === connectionId) {
-        const objCandidate = JSON.parse(candidate);
-        rtcPeerConnection?.current?.addIceCandidate(objCandidate);
-      }
+    peer.addEventListener('icecandidate', (candidate) => {
+      serverConnection?.current?.invoke('ProcessCandidateAsync', id, candidate);
     });
-  }, [serverConnection?.current]);
 
-  useEffect(() => {
-    if (isSelf) {
-      rtcPeerConnection.current?.getSenders().forEach((x) => {
-        if (x.track?.kind === 'audio') {
-          x.track.enabled = microphoneEnabled;
-        }
-      });
-    }
-  }, [microphoneEnabled]);
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: false,
+      audio: true,
+    });
 
-  useEffect(() => {
-    if (isSelf && videoRef.current?.srcObject) {
-      recreatePeerConnection('', cameraEnabled);
-    }
-  }, [cameraEnabled]);
+    stream.getTracks().forEach((track: MediaStreamTrack) => {
+      // TODO: should change enabled status by useEffect
+      if (track.kind === 'audio') track.enabled = audio;
+      peer.addTrack(track, stream);
+    });
 
-  useEffect(() => {
-    setupScreenSharing();
-  }, [screenSharingId]);
+    videoRef.current.srcObject = stream;
 
-  const setupScreenSharing = async () => {
-    if (screenSharingId && isSelf) {
-      await recreatePeerConnection(screenSharingId, false);
-    }
+    const offer = await peer.createOffer({
+      offerToReceiveAudio: false,
+      offerToReceiveVideo: false,
+    });
+
+    await peer.setLocalDescription(offer);
+
+    rtcPeerConnection.current = peer;
+
+    await serverConnection?.current?.invoke(
+      'ProcessOfferAsync',
+      id,
+      offer.sdp,
+      true
+    );
   };
 
-  const recreatePeerConnection = async (
-    screenId: string,
-    turnOnCamera: boolean
+  // 重新创建发送端
+  const recreatePeerSendonly = async (
+    stream: MediaStream,
+    screenStream: MediaStream | undefined = undefined
   ) => {
-    if (screenId && turnOnCamera) {
-      throw 'Cannot turn on camera while in screen sharing';
-    }
-
     if (videoRef.current?.srcObject) {
       videoRef.current?.srcObject
         .getTracks()
@@ -143,22 +120,76 @@ export const WebRTC = (props: IWebRTC) => {
 
     const peer = new RTCPeerConnection();
 
-    const baseStream = await navigator.mediaDevices.getUserMedia({
-      audio: true && hasAudio,
-      video: turnOnCamera && hasVideo,
+    stream.getTracks().forEach((track: MediaStreamTrack) => {
+      peer.addTrack(track, stream);
     });
 
-    baseStream.getTracks().forEach((track: MediaStreamTrack) => {
-      if (track.kind === 'audio') {
-        track.enabled = microphoneEnabled;
-      } else if (track.kind === 'video') {
-        track.enabled = cameraEnabled;
+    if (screenStream) {
+      screenStream.getTracks().forEach((track: MediaStreamTrack) => {
+        stream.addTrack(track);
+        peer.addTrack(track, screenStream);
+      });
+    }
+
+    videoRef.current.srcObject = stream;
+
+    const offer = await peer.createOffer({
+      offerToReceiveAudio: false,
+      offerToReceiveVideo: false,
+    });
+
+    await peer.setLocalDescription(offer);
+
+    rtcPeerConnection.current = peer;
+
+    await serverConnection?.current?.invoke(
+      'ProcessOfferAsync',
+      id,
+      offer?.sdp,
+      true
+    );
+  };
+
+  // 恢复发送端
+  const resumePeerSendonly = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: false,
+      audio: true,
+    });
+
+    await recreatePeerSendonly(stream);
+  };
+
+  // 摄像头
+  const toggleVideo = useLockFn(async () => {
+    if (video) {
+      await resumePeerSendonly();
+      setVideo(false);
+    } else {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+      if (stream) {
+        await recreatePeerSendonly(stream);
+        setVideo(true);
+        setScreen(false);
       }
+    }
+  });
 
-      peer.addTrack(track, baseStream);
-    });
-
-    if (screenId) {
+  // 共享屏幕
+  const toggleScreen = useLockFn(async (screenId?: string) => {
+    setScreenSelecting(true);
+    if (screen) {
+      await resumePeerSendonly();
+      setScreen(false);
+      setScreenSelecting(false);
+    } else {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: false,
+        audio: true,
+      });
       const videoConstraints: any = {
         mandatory: {
           chromeMediaSource: 'desktop',
@@ -169,38 +200,61 @@ export const WebRTC = (props: IWebRTC) => {
           maxHeight: 520,
         },
       };
-
       const screenStream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
         video: videoConstraints,
+        audio: false,
       });
-
-      screenStream.getTracks().forEach((track: MediaStreamTrack) => {
-        if (track.kind === 'audio') {
-          track.enabled = microphoneEnabled;
-        } else if (track.kind === 'video') {
-          track.enabled = true;
-        }
-        baseStream.addTrack(track);
-        peer.addTrack(track, screenStream);
-      });
+      if (stream && screenStream) {
+        await recreatePeerSendonly(stream, screenStream);
+        setScreen(true);
+        setVideo(false);
+        setScreenSelecting(false);
+      }
     }
+  });
 
-    videoRef.current.srcObject = baseStream;
-
-    rtcPeerConnection.current = peer;
-
-    const offer = await rtcPeerConnection?.current?.createOffer({
-      offerToReceiveAudio: false,
-      offerToReceiveVideo: false,
-    });
-
-    rtcPeerConnection?.current?.setLocalDescription(offer);
-
-    serverConnection?.current?.invoke('ProcessOfferAsync', id, offer?.sdp);
-
-    return rtcPeerConnection;
+  const onProcessAnswer = (_connectionId: string, answerSDP: string) => {
+    rtcPeerConnection?.current?.setRemoteDescription(
+      new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
+    );
   };
+
+  const onAddCandidate = (_connectionId: string, candidate: string) => {
+    const objCandidate = JSON.parse(candidate);
+    rtcPeerConnection?.current?.addIceCandidate(objCandidate);
+  };
+
+  const onNewOfferCreated = () => {
+    if (!isSelf) {
+      createPeerRecvonly();
+    }
+  };
+
+  React.useImperativeHandle(ref, () => ({
+    onProcessAnswer,
+    onAddCandidate,
+    onNewOfferCreated,
+    toggleVideo,
+    toggleScreen,
+  }));
+
+  React.useLayoutEffect(() => {
+    if (isSelf) {
+      createPeerSendonly();
+    } else {
+      createPeerRecvonly();
+    }
+  }, [serverConnection?.current]);
+
+  React.useEffect(() => {
+    if (isSelf && videoRef.current?.srcObject) {
+      videoRef.current.srcObject
+        .getAudioTracks()
+        .forEach((track: MediaStreamTrack) => {
+          track.enabled = audio;
+        });
+    }
+  }, [audio, isSelf, videoRef.current?.srcObject]);
 
   return (
     <Box component="div" style={styles.videoContainer}>
@@ -218,4 +272,4 @@ export const WebRTC = (props: IWebRTC) => {
       </Box>
     </Box>
   );
-};
+});
