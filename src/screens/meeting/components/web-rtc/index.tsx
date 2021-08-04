@@ -11,7 +11,12 @@ interface IWebRTC {
 }
 
 export interface IWebRTCRef {
-  onProcessAnswer: (connectionId: string, answerSDP: string) => void;
+  onProcessAnswer: (
+    connectionId: string,
+    answerSDP: string,
+    isSharingCamera: boolean,
+    isSharingScreen: boolean
+  ) => void;
   onAddCandidate: (connectionId: string, candidate: string) => void;
   onNewOfferCreated: (connectionId: string, answerSDP: string) => void;
   toggleVideo: () => void;
@@ -116,7 +121,9 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
   // 重新创建发送端
   const recreatePeerSendonly = async (
     stream: MediaStream,
-    screenStream: MediaStream | undefined = undefined
+    screenStream: MediaStream | undefined = undefined,
+    isSharingCamera: boolean,
+    isSharingScreen: boolean
   ) => {
     if (videoRef.current?.srcObject) {
       videoRef.current?.srcObject
@@ -154,7 +161,9 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
       'ProcessOfferAsync',
       id,
       offer?.sdp,
-      true
+      true,
+      isSharingCamera,
+      isSharingScreen
     );
   };
 
@@ -165,7 +174,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
       audio: true,
     });
 
-    await recreatePeerSendonly(stream);
+    await recreatePeerSendonly(stream, undefined, false, false);
   };
 
   // 摄像头
@@ -179,7 +188,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
         audio: true,
       });
       if (stream) {
-        await recreatePeerSendonly(stream);
+        await recreatePeerSendonly(stream, undefined, true, false);
         setVideo(true);
         setScreen(false);
       }
@@ -213,7 +222,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
         audio: false,
       });
       if (stream && screenStream) {
-        await recreatePeerSendonly(stream, screenStream);
+        await recreatePeerSendonly(stream, screenStream, false, true);
         setScreen(true);
         setVideo(false);
         setScreenSelecting(false);
@@ -221,12 +230,17 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
     }
   });
 
-  const onProcessAnswer = (_connectionId: string, answerSDP: string) => {
+  const onProcessAnswer = (
+    _connectionId: string,
+    answerSDP: string,
+    isSharingCamera: boolean,
+    isSharingScreen: boolean
+  ) => {
     console.log('------333');
     rtcPeerConnection?.current?.setRemoteDescription(
       new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
     );
-    if (fullScreen) {
+    if (isSharingScreen || isSharingCamera) {
       setVideoWidth(800);
       setVideoHeight(800);
     } else {

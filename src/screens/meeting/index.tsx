@@ -71,11 +71,18 @@ const MeetingScreen: React.FC = React.memo(() => {
 
     serverConnection?.current?.on(
       'ProcessAnswer',
-      (connectionId: string, answerSDP: string) => {
+      (
+        connectionId: string,
+        answerSDP: string,
+        isSharingCamera: boolean,
+        isSharingScreen: boolean
+      ) => {
         if (userSessionsRef.current[connectionId]) {
           userSessionsRef.current[connectionId].onProcessAnswer(
             connectionId,
-            answerSDP
+            answerSDP,
+            isSharingCamera,
+            isSharingScreen
           );
         }
       }
