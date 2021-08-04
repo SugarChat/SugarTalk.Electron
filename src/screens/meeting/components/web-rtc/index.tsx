@@ -27,6 +27,14 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
 
   const rtcPeerConnection = React.useRef<RTCPeerConnection>();
 
+  const [fullScreen, setFullScreen] = React.useState<boolean>(false);
+
+  const [videoWidth, setVideoWidth] = React.useState<number>(200);
+  const [videoHeight, setVideoHeight] = React.useState<number>(200);
+
+  const maxVideoWidth: number = 800;
+  const maxVideoHeight: number = 800;
+
   const {
     serverConnection,
     audio,
@@ -214,9 +222,17 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
   });
 
   const onProcessAnswer = (_connectionId: string, answerSDP: string) => {
+    console.log('------333');
     rtcPeerConnection?.current?.setRemoteDescription(
       new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
     );
+    if (fullScreen) {
+      setVideoWidth(800);
+      setVideoHeight(800);
+    } else {
+      setVideoWidth(200);
+      setVideoHeight(200);
+    }
   };
 
   const onAddCandidate = (_connectionId: string, candidate: string) => {
@@ -247,12 +263,15 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
   }, [serverConnection?.current]);
 
   React.useEffect(() => {
+    console.log('---0000---');
     if (isSelf && videoRef.current?.srcObject) {
       videoRef.current.srcObject
         .getAudioTracks()
         .forEach((track: MediaStreamTrack) => {
           track.enabled = audio;
         });
+    } else if (!isSelf && videoRef.current?.srcObject) {
+      console.log('------111');
     }
   }, [audio, isSelf, videoRef.current?.srcObject]);
 
@@ -261,8 +280,8 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
       <video
         ref={videoRef}
         autoPlay
-        width="200"
-        height="200"
+        width={videoWidth}
+        height={videoHeight}
         style={styles.video}
         muted={isSelf}
       />
