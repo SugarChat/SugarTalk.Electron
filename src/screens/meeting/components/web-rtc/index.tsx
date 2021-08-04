@@ -76,6 +76,8 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
       'ProcessOfferAsync',
       id,
       offer.sdp,
+      false,
+      false,
       false
     );
   };
@@ -114,7 +116,9 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
       'ProcessOfferAsync',
       id,
       offer.sdp,
-      true
+      true,
+      false,
+      false
     );
   };
 
