@@ -6,16 +6,22 @@ import * as styles from './styles';
 import { FooterToolbar } from './components/footer-toolbar';
 import { IWebRTCRef, WebRTC } from './components/web-rtc';
 import { MeetingContext, MeetingProvider } from './context';
+import { VerticalUserList } from './components/vertical-user-list';
+import Api from '../../services/api';
 
-interface IUserSession {
+export interface IUserSession {
   id: string;
   userName: string;
   isSelf: boolean;
+  avatar: string;
+  isSharingScreen: boolean;
+  isSharingCamera: boolean;
 }
 
 interface IUser {
   id: string;
   userName: string;
+  avatar: string;
 }
 
 const MeetingScreen: React.FC = React.memo(() => {
@@ -23,7 +29,7 @@ const MeetingScreen: React.FC = React.memo(() => {
 
   const userSessionsRef = React.useRef<Record<string, IWebRTCRef>>({});
 
-  const { serverConnection } = React.useContext(MeetingContext);
+  const { serverConnection, meetingNumber } = React.useContext(MeetingContext);
 
   const selfUserSession = React.useMemo(() => {
     return userSessions.find((userSession) => userSession.isSelf === true);
@@ -34,6 +40,10 @@ const MeetingScreen: React.FC = React.memo(() => {
       id: user.id,
       userName: user.userName,
       isSelf,
+      avatar:
+        'https://lwlies.com/wp-content/uploads/2017/04/avatar-2009-1108x0-c-default.jpg',
+      isSharingCamera: false,
+      isSharingScreen: false,
     };
 
     setUserSessions((oldUserSessions: IUserSession[]) => [
@@ -71,7 +81,7 @@ const MeetingScreen: React.FC = React.memo(() => {
 
     serverConnection?.current?.on(
       'ProcessAnswer',
-      (
+      async (
         connectionId: string,
         answerSDP: string,
         isSharingCamera: boolean,
@@ -85,6 +95,12 @@ const MeetingScreen: React.FC = React.memo(() => {
             isSharingScreen
           );
         }
+
+        const meetingSessionDto = await Api.meeting.getMeetingSession({
+          meetingNumber,
+        });
+
+        console.log(meetingSessionDto);
       }
     );
 
@@ -125,25 +141,52 @@ const MeetingScreen: React.FC = React.memo(() => {
     }
   };
 
+  // const hack = userSessions.find((x) => x.userName === '13');
+  // if (hack) {
+  //   hack.isSharingCamera = true;
+  // }
+
+  const userThatShowingVideo = userSessions.find(
+    (x) => x.isSharingCamera || x.isSharingScreen
+  );
+
   return (
     <PageScreen style={styles.root}>
       <StatusBar />
 
-      <Box style={styles.webRTCContainer}>
-        {userSessions.map((userSession, key) => {
-          return (
+      {!userThatShowingVideo && (
+        <Box style={styles.webRTCContainer}>
+          {userSessions.map((userSession, key) => {
+            return (
+              <WebRTC
+                ref={(ref: IWebRTCRef) => {
+                  userSessionsRef.current[userSession.id] = ref;
+                }}
+                key={key.toString()}
+                userSession={userSession}
+                isSelf={userSession.isSelf}
+              />
+            );
+          })}
+        </Box>
+      )}
+
+      {userThatShowingVideo && (
+        <Box style={styles.sharingRootContainer}>
+          <Box style={styles.sharingContainer}>
             <WebRTC
               ref={(ref: IWebRTCRef) => {
-                userSessionsRef.current[userSession.id] = ref;
+                userSessionsRef.current[userThatShowingVideo.id] = ref;
               }}
-              key={key.toString()}
-              id={userSession.id}
-              userName={userSession.userName}
-              isSelf={userSession.isSelf}
+              userSession={userThatShowingVideo}
+              isSelf={userThatShowingVideo.isSelf}
             />
-          );
-        })}
-      </Box>
+          </Box>
+          <Box style={styles.verticalUserList}>
+            <VerticalUserList userSessions={userSessions}></VerticalUserList>
+          </Box>
+        </Box>
+      )}
 
       <FooterToolbar toggleVideo={toggleVideo} toggleScreen={toggleScreen} />
     </PageScreen>

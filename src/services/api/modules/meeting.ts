@@ -1,5 +1,7 @@
 import {
+  GetMeetingSessionRequest,
   MeetingDto,
+  MeetingSession,
   ScheduleMeetingCommand,
 } from '../../../dtos/schedule-meeting-command';
 import { SugarTalkResponse } from '../../../dtos/sugar-talk-response';
@@ -12,6 +14,16 @@ export default {
     const response = await api.post<SugarTalkResponse<MeetingDto>>(
       '/meeting/schedule',
       request
+    );
+
+    return response.data;
+  },
+
+  getMeetingSession: async (
+    getMeetingSessionRequest: GetMeetingSessionRequest
+  ): Promise<SugarTalkResponse<MeetingSession>> => {
+    const response = await api.get<SugarTalkResponse<MeetingSession>>(
+      `/meeting/session?meetingNumber=${getMeetingSessionRequest.meetingNumber}`
     );
 
     return response.data;

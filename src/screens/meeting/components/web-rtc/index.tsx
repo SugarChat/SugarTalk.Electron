@@ -1,12 +1,12 @@
-import { Box } from '@material-ui/core';
+import { Avatar, Box } from '@material-ui/core';
 import { useLockFn } from 'ahooks';
 import React from 'react';
+import { IUserSession } from '../..';
 import { MeetingContext } from '../../context';
 import * as styles from './styles';
 
 interface IWebRTC {
-  id: string;
-  userName: string;
+  userSession: IUserSession;
   isSelf: boolean;
 }
 
@@ -24,7 +24,7 @@ export interface IWebRTCRef {
 }
 
 export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
-  const { id, userName = 'unknown', isSelf } = props;
+  const { userSession, isSelf } = props;
 
   const videoRef = React.useRef<any>();
 
@@ -60,7 +60,11 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
     });
 
     peer.addEventListener('icecandidate', (candidate) => {
-      serverConnection?.current?.invoke('ProcessCandidateAsync', id, candidate);
+      serverConnection?.current?.invoke(
+        'ProcessCandidateAsync',
+        userSession.id,
+        candidate
+      );
     });
 
     const offer = await peer.createOffer({
@@ -74,7 +78,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
 
     await serverConnection?.current?.invoke(
       'ProcessOfferAsync',
-      id,
+      userSession.id,
       offer.sdp,
       false,
       false,
@@ -87,7 +91,11 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
     const peer = new RTCPeerConnection();
 
     peer.addEventListener('icecandidate', (candidate) => {
-      serverConnection?.current?.invoke('ProcessCandidateAsync', id, candidate);
+      serverConnection?.current?.invoke(
+        'ProcessCandidateAsync',
+        userSession.id,
+        candidate
+      );
     });
 
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -114,7 +122,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
 
     await serverConnection?.current?.invoke(
       'ProcessOfferAsync',
-      id,
+      userSession.id,
       offer.sdp,
       true,
       false,
@@ -161,9 +169,10 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
 
     rtcPeerConnection.current = peer;
 
+    console.log('------', isSharingCamera, isSharingScreen);
     await serverConnection?.current?.invoke(
       'ProcessOfferAsync',
-      id,
+      userSession.id,
       offer?.sdp,
       true,
       isSharingCamera,
@@ -293,20 +302,30 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
     }
   }, [audio, isSelf, videoRef.current?.srcObject]);
 
+  const showVideo = userSession.isSharingCamera || userSession.isSharingScreen;
   return (
-    <Box component="div" style={styles.videoContainer}>
-      <video
-        ref={videoRef}
-        autoPlay
-        width={videoWidth}
-        height={videoHeight}
-        style={styles.video}
-        muted={isSelf}
-      />
-      {!isSelf && <audio ref={audioRef} autoPlay muted={isSelf} />}
-      <Box component="div" style={styles.userName}>
-        {userName}
+    <>
+      <Box component="div" style={styles.videoContainer}>
+        <video
+          ref={videoRef}
+          autoPlay
+          width={showVideo ? maxVideoWidth : 0}
+          height={showVideo ? maxVideoHeight : 0}
+          style={styles.video}
+          muted={isSelf}
+        />
+
+        {!showVideo && (
+          <Avatar src={userSession.avatar} style={styles.avatar} />
+        )}
+
+        {!isSelf && <audio ref={audioRef} autoPlay muted={isSelf} />}
+        {!showVideo && (
+          <Box component="div" style={styles.userName}>
+            {userSession.userName}
+          </Box>
+        )}
       </Box>
-    </Box>
+    </>
   );
 });
