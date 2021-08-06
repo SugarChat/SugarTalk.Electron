@@ -96,21 +96,31 @@ const MeetingScreen: React.FC = React.memo(() => {
           );
         }
 
-        const meetingSessionDto = await Api.meeting.getMeetingSession({
-          meetingNumber,
-        });
-
-        console.log(meetingSessionDto);
+        console.log('----process answer----');
       }
     );
 
     serverConnection?.current?.on(
       'NewOfferCreated',
-      (connectionId: string, answerSDP: string) => {
+      async (
+        connectionId: string,
+        answerSDP: string,
+        isSharingCamera: boolean,
+        isSharingScreen: boolean
+      ) => {
+        console.log('----new answer----');
+
+        const meetingSessionDto = await Api.meeting.getMeetingSession({
+          meetingNumber,
+        });
+
+        console.log(meetingSessionDto);
         if (userSessionsRef.current[connectionId]) {
           userSessionsRef.current[connectionId].onNewOfferCreated(
             connectionId,
-            answerSDP
+            answerSDP,
+            isSharingCamera,
+            isSharingScreen
           );
         }
       }
@@ -140,11 +150,6 @@ const MeetingScreen: React.FC = React.memo(() => {
       userSessionsRef.current[selfUserSession.id].toggleScreen(screenId);
     }
   };
-
-  // const hack = userSessions.find((x) => x.userName === '13');
-  // if (hack) {
-  //   hack.isSharingCamera = true;
-  // }
 
   const userThatShowingVideo = userSessions.find(
     (x) => x.isSharingCamera || x.isSharingScreen

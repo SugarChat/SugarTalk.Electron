@@ -18,7 +18,12 @@ export interface IWebRTCRef {
     isSharingScreen: boolean
   ) => void;
   onAddCandidate: (connectionId: string, candidate: string) => void;
-  onNewOfferCreated: (connectionId: string, answerSDP: string) => void;
+  onNewOfferCreated: (
+    connectionId: string,
+    answerSDP: string,
+    isSharingCamera: boolean,
+    isSharingScreen: boolean
+  ) => void;
   toggleVideo: () => void;
   toggleScreen: (screenId?: string) => void;
 }
@@ -51,7 +56,10 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
   } = React.useContext(MeetingContext);
 
   // 创建接受端
-  const createPeerRecvonly = async () => {
+  const createPeerRecvonly = async (
+    isSharingCamera: boolean,
+    isSharingScreen: boolean
+  ) => {
     const peer = new RTCPeerConnection();
 
     peer.addEventListener('addstream', (e: any) => {
@@ -76,13 +84,17 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
 
     rtcPeerConnection.current = peer;
 
+    console.log(
+      '----createPeerRecvonly process offer----',
+      userSession.userName
+    );
     await serverConnection?.current?.invoke(
       'ProcessOfferAsync',
       userSession.id,
       offer.sdp,
       false,
-      false,
-      false
+      isSharingCamera,
+      isSharingScreen
     );
   };
 
@@ -120,13 +132,17 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
 
     rtcPeerConnection.current = peer;
 
+    console.log(
+      '----createPeerSendonly process offer----',
+      userSession.isSharingCamera
+    );
     await serverConnection?.current?.invoke(
       'ProcessOfferAsync',
       userSession.id,
       offer.sdp,
       true,
-      false,
-      false
+      userSession.isSharingCamera,
+      userSession.isSharingScreen
     );
   };
 
@@ -249,7 +265,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
     isSharingCamera: boolean,
     isSharingScreen: boolean
   ) => {
-    console.log('------333');
+    console.log('------333---');
     rtcPeerConnection?.current?.setRemoteDescription(
       new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
     );
@@ -267,9 +283,15 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
     rtcPeerConnection?.current?.addIceCandidate(objCandidate);
   };
 
-  const onNewOfferCreated = () => {
+  const onNewOfferCreated = (
+    connectionId: string,
+    answerSDP: string,
+    isSharingCamera: boolean,
+    isSharingScreen: boolean
+  ) => {
+    console.log('-----', isSharingCamera);
     if (!isSelf) {
-      createPeerRecvonly();
+      createPeerRecvonly(isSharingCamera, isSharingScreen);
     }
   };
 
@@ -285,12 +307,11 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
     if (isSelf) {
       createPeerSendonly();
     } else {
-      createPeerRecvonly();
+      createPeerRecvonly(false, false);
     }
   }, [serverConnection?.current]);
 
   React.useEffect(() => {
-    console.log('---0000---');
     if (isSelf && videoRef.current?.srcObject) {
       videoRef.current.srcObject
         .getAudioTracks()
