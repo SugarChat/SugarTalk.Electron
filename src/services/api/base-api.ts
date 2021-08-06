@@ -16,7 +16,7 @@ export const api: AxiosInstance = axios.create({
 
 api.interceptors.request.use(
   (request) => {
-    request.headers['Authorization'] = `Bearer ${
+    request.headers.Authorization = `Bearer ${
       loadRootStore()?.userStore?.idToken ?? ''
     }`;
     return request;
