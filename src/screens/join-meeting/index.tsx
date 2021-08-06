@@ -112,7 +112,7 @@ export const JoinMeeting: React.FC = () => {
             label="自动连接音频"
           />
         </div>
-        <div style={styles.contentItem}>
+        {/* <div style={styles.contentItem}>
           <FormControlLabel
             control={
               <Checkbox
@@ -124,7 +124,7 @@ export const JoinMeeting: React.FC = () => {
             }
             label="入会开启摄像头"
           />
-        </div>
+        </div> */}
         <div style={styles.joinButtonWrapper}>
           <Button
             style={{ width: '100%', height: '40px' }}

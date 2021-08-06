@@ -1,6 +1,6 @@
 import { Box } from '@material-ui/core';
-import { HubConnection } from '@microsoft/signalr';
-import React, { useEffect } from 'react';
+import { useLockFn } from 'ahooks';
+import React from 'react';
 import { MeetingContext } from '../../context';
 import * as styles from './styles';
 
@@ -8,132 +8,268 @@ interface IWebRTC {
   id: string;
   userName: string;
   isSelf: boolean;
-  serverRef: React.MutableRefObject<HubConnection | undefined>;
 }
 
-export const WebRTC = (props: IWebRTC) => {
-  const { id, userName = 'unknown', isSelf, serverRef } = props;
+export interface IWebRTCRef {
+  onProcessAnswer: (connectionId: string, answerSDP: string) => void;
+  onAddCandidate: (connectionId: string, candidate: string) => void;
+  onNewOfferCreated: (connectionId: string, answerSDP: string) => void;
+  toggleVideo: () => void;
+  toggleScreen: (screenId?: string) => void;
+}
 
-  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
+  const { id, userName = 'unknown', isSelf } = props;
 
-  const rtcPeerRef = React.useRef<RTCPeerConnection | null>(null);
+  const videoRef = React.useRef<any>();
 
-  const { video, voice } = React.useContext(MeetingContext);
+  const audioRef = React.useRef<any>();
 
-  const createPeerSendonly = async () => {
-    const rtcPeer = new RTCPeerConnection();
+  const rtcPeerConnection = React.useRef<RTCPeerConnection>();
 
-    rtcPeer.addEventListener('icecandidate', (candidate) => {
-      serverRef?.current?.invoke('ProcessCandidateAsync', id, candidate);
-    });
+  const {
+    serverConnection,
+    audio,
+    video,
+    setVideo,
+    screen,
+    setScreen,
+    setScreenSelecting,
+  } = React.useContext(MeetingContext);
 
-    const localStream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true,
-    });
-
-    videoRef.current.srcObject = localStream;
-
-    localStream.getTracks().forEach((track: MediaStreamTrack) => {
-      rtcPeer.addTrack(track, localStream);
-      if (track.kind === 'audio') {
-        track.enabled = voice;
-      } else if (track.kind === 'video') {
-        track.enabled = video;
-      }
-    });
-
-    const offer = await rtcPeer.createOffer({
-      offerToReceiveAudio: false,
-      offerToReceiveVideo: false,
-    });
-
-    rtcPeer.setLocalDescription(offer);
-    serverRef?.current?.invoke('ProcessOfferAsync', id, offer.sdp);
-
-    rtcPeerRef.current = rtcPeer;
-  };
-
+  // 创建接受端
   const createPeerRecvonly = async () => {
-    const rtcPeer = new RTCPeerConnection();
+    const peer = new RTCPeerConnection();
 
-    rtcPeer.addEventListener('addstream', (e: any) => {
+    peer.addEventListener('addstream', (e: any) => {
       videoRef.current.srcObject = e.stream;
+      audioRef.current.srcObject = e.stream;
     });
 
-    rtcPeer.addEventListener('icecandidate', (candidate) => {
-      serverRef?.current?.invoke('ProcessCandidateAsync', id, candidate);
+    peer.addEventListener('icecandidate', (candidate) => {
+      serverConnection?.current?.invoke('ProcessCandidateAsync', id, candidate);
     });
 
-    const offer = await rtcPeer.createOffer({
+    const offer = await peer.createOffer({
       offerToReceiveAudio: true,
       offerToReceiveVideo: true,
     });
 
-    serverRef?.current?.invoke('ProcessOfferAsync', id, offer.sdp);
+    await peer.setLocalDescription(offer);
 
-    rtcPeer.setLocalDescription(offer);
+    rtcPeerConnection.current = peer;
 
-    rtcPeerRef.current = rtcPeer;
+    await serverConnection?.current?.invoke(
+      'ProcessOfferAsync',
+      id,
+      offer.sdp,
+      false
+    );
   };
 
-  React.useEffect(() => {
+  // 创建发送端
+  const createPeerSendonly = async () => {
+    const peer = new RTCPeerConnection();
+
+    peer.addEventListener('icecandidate', (candidate) => {
+      serverConnection?.current?.invoke('ProcessCandidateAsync', id, candidate);
+    });
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: false,
+      audio: true,
+    });
+
+    stream.getTracks().forEach((track: MediaStreamTrack) => {
+      // TODO: should change enabled status by useEffect
+      if (track.kind === 'audio') track.enabled = audio;
+      peer.addTrack(track, stream);
+    });
+
+    videoRef.current.srcObject = stream;
+
+    const offer = await peer.createOffer({
+      offerToReceiveAudio: false,
+      offerToReceiveVideo: false,
+    });
+
+    await peer.setLocalDescription(offer);
+
+    rtcPeerConnection.current = peer;
+
+    await serverConnection?.current?.invoke(
+      'ProcessOfferAsync',
+      id,
+      offer.sdp,
+      true
+    );
+  };
+
+  // 重新创建发送端
+  const recreatePeerSendonly = async (
+    stream: MediaStream,
+    screenStream: MediaStream | undefined = undefined
+  ) => {
+    if (videoRef.current?.srcObject) {
+      videoRef.current?.srcObject
+        .getTracks()
+        .forEach((track: MediaStreamTrack) => {
+          track.stop();
+        });
+    }
+
+    const peer = new RTCPeerConnection();
+
+    stream.getTracks().forEach((track: MediaStreamTrack) => {
+      peer.addTrack(track, stream);
+    });
+
+    if (screenStream) {
+      screenStream.getTracks().forEach((track: MediaStreamTrack) => {
+        stream.addTrack(track);
+        peer.addTrack(track, screenStream);
+      });
+    }
+
+    videoRef.current.srcObject = stream;
+
+    const offer = await peer.createOffer({
+      offerToReceiveAudio: false,
+      offerToReceiveVideo: false,
+    });
+
+    await peer.setLocalDescription(offer);
+
+    rtcPeerConnection.current = peer;
+
+    await serverConnection?.current?.invoke(
+      'ProcessOfferAsync',
+      id,
+      offer?.sdp,
+      true
+    );
+  };
+
+  // 恢复发送端
+  const resumePeerSendonly = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: false,
+      audio: true,
+    });
+
+    await recreatePeerSendonly(stream);
+  };
+
+  // 摄像头
+  const toggleVideo = useLockFn(async () => {
+    if (video) {
+      await resumePeerSendonly();
+      setVideo(false);
+    } else {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+      if (stream) {
+        await recreatePeerSendonly(stream);
+        setVideo(true);
+        setScreen(false);
+      }
+    }
+  });
+
+  // 共享屏幕
+  const toggleScreen = useLockFn(async (screenId?: string) => {
+    setScreenSelecting(true);
+    if (screen) {
+      await resumePeerSendonly();
+      setScreen(false);
+      setScreenSelecting(false);
+    } else {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: false,
+        audio: true,
+      });
+      const videoConstraints: any = {
+        mandatory: {
+          chromeMediaSource: 'desktop',
+          chromeMediaSourceId: screenId,
+          minWidth: 1080,
+          maxWidth: 1080,
+          minHeight: 520,
+          maxHeight: 520,
+        },
+      };
+      const screenStream = await navigator.mediaDevices.getUserMedia({
+        video: videoConstraints,
+        audio: false,
+      });
+      if (stream && screenStream) {
+        await recreatePeerSendonly(stream, screenStream);
+        setScreen(true);
+        setVideo(false);
+        setScreenSelecting(false);
+      }
+    }
+  });
+
+  const onProcessAnswer = (_connectionId: string, answerSDP: string) => {
+    rtcPeerConnection?.current?.setRemoteDescription(
+      new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
+    );
+  };
+
+  const onAddCandidate = (_connectionId: string, candidate: string) => {
+    const objCandidate = JSON.parse(candidate);
+    rtcPeerConnection?.current?.addIceCandidate(objCandidate);
+  };
+
+  const onNewOfferCreated = () => {
+    if (!isSelf) {
+      createPeerRecvonly();
+    }
+  };
+
+  React.useImperativeHandle(ref, () => ({
+    onProcessAnswer,
+    onAddCandidate,
+    onNewOfferCreated,
+    toggleVideo,
+    toggleScreen,
+  }));
+
+  React.useLayoutEffect(() => {
     if (isSelf) {
       createPeerSendonly();
     } else {
       createPeerRecvonly();
     }
+  }, [serverConnection?.current]);
 
-    serverRef?.current?.on('ProcessAnswer', (connectionId, answerSDP) => {
-      if (id === connectionId) {
-        rtcPeerRef?.current?.setRemoteDescription(
-          new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
-        );
-      }
-    });
-
-    serverRef?.current?.on('AddCandidate', (connectionId, candidate) => {
-      if (id === connectionId) {
-        const objCandidate = JSON.parse(candidate);
-        rtcPeerRef?.current?.addIceCandidate(objCandidate);
-      }
-    });
-  }, []);
-
-  useEffect(() => {
+  React.useEffect(() => {
     if (isSelf && videoRef.current?.srcObject) {
       videoRef.current.srcObject
         .getAudioTracks()
         .forEach((track: MediaStreamTrack) => {
-          track.enabled = voice;
+          track.enabled = audio;
         });
     }
-  }, [voice]);
-
-  useEffect(() => {
-    if (isSelf && videoRef.current?.srcObject) {
-      videoRef.current.srcObject
-        .getVideoTracks()
-        .forEach((track: MediaStreamTrack) => {
-          track.enabled = video;
-        });
-    }
-  }, [video]);
+  }, [audio, isSelf, videoRef.current?.srcObject]);
 
   return (
     <Box component="div" style={styles.videoContainer}>
       <video
         ref={videoRef}
         autoPlay
-        playsInline
-        width="300"
-        height="300"
+        width="200"
+        height="200"
         style={styles.video}
         muted={isSelf}
       />
+      {!isSelf && <audio ref={audioRef} autoPlay muted={isSelf} />}
       <Box component="div" style={styles.userName}>
         {userName}
       </Box>
     </Box>
   );
-};
+});
