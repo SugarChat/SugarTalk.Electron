@@ -81,7 +81,7 @@ export const facebookAuthenticated = (): Promise<{ accessToken: string }> => {
 
     const authWindow = getBrowserWindowInstance();
 
-    const facebookAuthURL = `https://www.facebook.com/v3.6/dialog/oauth?client_id=${options.clientId}&redirect_uri=${options.redirectUri}&response_type=token&scope=${options.scopes}&display=popup`;
+    const facebookAuthURL = `https://www.facebook.com/v3.2/dialog/oauth?client_id=${options.clientId}&redirect_uri=${options.redirectUri}&response_type=token,granted_scopes&scope=${options.scopes}&display=popup`;
     authWindow.loadURL(facebookAuthURL);
     authWindow.webContents.openDevTools();
 
@@ -89,13 +89,15 @@ export const facebookAuthenticated = (): Promise<{ accessToken: string }> => {
       authWindow.show();
     });
 
-    authWindow.webContents.on('will-redirect', (_event, url) => {
+    authWindow.webContents.on('will-navigate', (_event, url) => {
+      console.log(url);
+
       handleUrl(url);
     });
 
     const handleUrl = (url: string) => {
       try {
-        const rawCode = /access_token=([^&]*)/.exec(url) || '';
+        const rawCode = /token=([^&]*)/.exec(url) || '';
         const accessToken = rawCode && rawCode.length > 1 ? rawCode[1] : '';
         const urlParseError = /\?error=(.+)$/.exec(url);
         if (!accessToken || urlParseError) {
