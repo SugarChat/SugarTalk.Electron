@@ -14,6 +14,7 @@ import {
 import { Guid } from 'guid-typescript';
 import electron from 'electron';
 import { MeetingInfo } from '../join-meeting';
+import { BaseStoreInstance } from '../../contexts/setup-store';
 
 export const MeetingList = () => {
   const history = useHistory();
@@ -27,6 +28,10 @@ export const MeetingList = () => {
     dispatch({
       type: 'UpdateIdToken',
       payload: '',
+    });
+    dispatch({
+      type: 'UpdateUserInfo',
+      payload: BaseStoreInstance,
     });
   };
 

@@ -1,27 +1,16 @@
-// import * as electron from 'electron';
 import { useState } from 'react';
 import { useSnackbar } from 'notistack';
 import { googleAuthenticated, facebookAuthenticated } from './login-service';
 import { useStores } from '../../contexts/root-context';
-
-export type LoginType = 'Google' | 'Facebook' | 'Wechat';
-
-export interface ILoginProps {
-  loginType: LoginType;
-  onSuccess: () => void;
-}
-
-export interface ILoginPlatform extends ILoginProps {
-  imageSrc: string;
-}
+import Api from '../../services/api/modules/login';
+import { IGoogleAccessToken, ILoginProps, ILoginPlatform } from './type';
 
 export const useLoginLogic = () => {
   const { enqueueSnackbar } = useSnackbar();
-  const [hasLoginError, setLoginError] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const { dispatch } = useStores();
 
   const onHandleError = () => {
-    setLoginError(true);
     enqueueSnackbar('Login fail', {
       variant: 'error',
       autoHideDuration: 6000,
@@ -37,7 +26,12 @@ export const useLoginLogic = () => {
     {
       loginType: 'Google',
       imageSrc: '../assets/login/google.png',
-      onSuccess: () => {},
+      onSuccess: async () => {
+        const { code, data } = await Api.sign();
+        if (code === 20000) {
+          dispatch({ type: 'UpdateUserInfo', payload: data });
+        }
+      },
     },
     {
       loginType: 'Facebook',
@@ -46,38 +40,40 @@ export const useLoginLogic = () => {
     },
   ];
 
-  const onLogin = ({ loginType, onSuccess }: ILoginProps) => {
-    switch (loginType) {
-      case 'Google':
-        googleAuthenticated()
-          .then((result) => {
-            dispatch({
-              type: 'UpdateIdToken',
-              payload: result?.credentials.id_token,
+  const onLogin = async ({ loginType, onSuccess }: ILoginProps) => {
+    try {
+      window?.loadingOpen();
+      switch (loginType) {
+        case 'Google':
+          await googleAuthenticated()
+            .then(({ idToken }) => {
+              dispatch({ type: 'UpdateIdToken', payload: idToken });
+              onSuccess();
+            })
+            .catch(() => {
+              onHandleError();
             });
-            onSuccess();
-          })
-          .catch(() => {
-            onHandleError();
-          });
-        break;
-      case 'Facebook':
-        facebookAuthenticated()
-          .then(({ accessToken }) => {
-            console.log(accessToken);
-          })
-          .catch(() => onHandleError());
-        break;
-      case 'Wechat':
-        break;
-      default:
-        break;
+          break;
+        case 'Facebook':
+          await facebookAuthenticated()
+            .then((result) => {
+              console.log(result);
+            })
+            .catch(() => onHandleError());
+          break;
+        case 'Wechat':
+          break;
+        default:
+          break;
+      }
+    } finally {
+      window?.loadingClose();
     }
   };
 
   return {
     onLogin,
     loginPlatformList,
-    hasLoginError,
+    loading,
   };
 };

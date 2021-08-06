@@ -12,6 +12,10 @@ module.exports = {
     'react/prop-types': 'off',
     'react/jsx-props-no-spreading': 'off',
     'jsx-a11y/media-has-caption': 'off',
+    '@typescript-eslint/ban-types': 'off',
+    '@typescript-eslint/no-use-before-define': 'off',
+    'promise/catch-or-return': 'off',
+    'consistent-return': 'off',
     'react/display-name': 'off',
   },
   parserOptions: {

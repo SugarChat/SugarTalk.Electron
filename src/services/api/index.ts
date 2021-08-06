@@ -10,7 +10,9 @@
 // 以上做法够灵活, 但失去提示
 
 import meeting from './modules/meeting';
+import login from './modules/login';
 
 export default {
   meeting,
+  login,
 };
