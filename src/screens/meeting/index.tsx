@@ -11,17 +11,19 @@ import Api from '../../services/api';
 
 export interface IUserSession {
   id: string;
+  connectionId: string;
   userName: string;
   isSelf: boolean;
-  avatar: string;
+  picture: string;
   isSharingScreen: boolean;
   isSharingCamera: boolean;
 }
 
 interface IUser {
   id: string;
+  connectionId: string;
   userName: string;
-  avatar: string;
+  picture: string;
 }
 
 const MeetingScreen: React.FC = React.memo(() => {
@@ -38,9 +40,10 @@ const MeetingScreen: React.FC = React.memo(() => {
   const createUserSession = (user: IUser, isSelf: boolean) => {
     const userSession: IUserSession = {
       id: user.id,
+      connectionId: user.connectionId,
       userName: user.userName,
       isSelf,
-      avatar:
+      picture:
         'https://lwlies.com/wp-content/uploads/2017/04/avatar-2009-1108x0-c-default.jpg',
       isSharingCamera: false,
       isSharingScreen: false,
@@ -52,10 +55,10 @@ const MeetingScreen: React.FC = React.memo(() => {
     ]);
   };
 
-  const removeUserSession = (id: string) => {
+  const removeUserSession = (connectionId: string) => {
     setUserSessions((oldUserSessions: IUserSession[]) =>
       oldUserSessions.filter(
-        (userSession: IUserSession) => userSession.id !== id
+        (userSession: IUserSession) => userSession.connectionId !== connectionId
       )
     );
   };
@@ -141,7 +144,7 @@ const MeetingScreen: React.FC = React.memo(() => {
 
   const toggleVideo = () => {
     if (selfUserSession) {
-      userSessionsRef.current[selfUserSession.id].toggleVideo();
+      userSessionsRef.current[selfUserSession.connectionId].toggleVideo();
     }
   };
 
@@ -165,7 +168,7 @@ const MeetingScreen: React.FC = React.memo(() => {
             return (
               <WebRTC
                 ref={(ref: IWebRTCRef) => {
-                  userSessionsRef.current[userSession.id] = ref;
+                  userSessionsRef.current[userSession.connectionId] = ref;
                 }}
                 key={key.toString()}
                 userSession={userSession}
