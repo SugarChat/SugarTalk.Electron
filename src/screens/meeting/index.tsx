@@ -14,7 +14,7 @@ export interface IUserSession {
   connectionId: string;
   userName: string;
   isSelf: boolean;
-  picture: string;
+  userPicture: string;
   isSharingScreen: boolean;
   isSharingCamera: boolean;
 }
@@ -23,7 +23,7 @@ interface IUser {
   id: string;
   connectionId: string;
   userName: string;
-  picture: string;
+  userPicture: string;
 }
 
 const MeetingScreen: React.FC = React.memo(() => {
@@ -43,8 +43,7 @@ const MeetingScreen: React.FC = React.memo(() => {
       connectionId: user.connectionId,
       userName: user.userName,
       isSelf,
-      picture:
-        'https://lwlies.com/wp-content/uploads/2017/04/avatar-2009-1108x0-c-default.jpg',
+      userPicture: user.userPicture,
       isSharingCamera: false,
       isSharingScreen: false,
     };

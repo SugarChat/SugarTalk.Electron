@@ -100,11 +100,50 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
 
   // 创建发送端
   const createPeerSendonly = async () => {
+    const peer = new RTCPeerConnection();
+
+    peer.addEventListener('icecandidate', (candidate) => {
+      serverConnection?.current?.invoke(
+        'ProcessCandidateAsync',
+        userSession.connectionId,
+        candidate
+      );
+    });
+
     const stream = await navigator.mediaDevices.getUserMedia({
       video: false,
       audio: true,
     });
-    await recreatePeerSendonly(stream, undefined, false, false);
+
+    stream.getTracks().forEach((track: MediaStreamTrack) => {
+      // TODO: should change enabled status by useEffect
+      if (track.kind === 'audio') track.enabled = audio;
+      peer.addTrack(track, stream);
+    });
+
+    videoRef.current.srcObject = stream;
+
+    const offer = await peer.createOffer({
+      offerToReceiveAudio: false,
+      offerToReceiveVideo: false,
+    });
+
+    await peer.setLocalDescription(offer);
+
+    rtcPeerConnection.current = peer;
+
+    console.log(
+      '----createPeerSendonly process offer----',
+      userSession.isSharingCamera
+    );
+    await serverConnection?.current?.invoke(
+      'ProcessOfferAsync',
+      userSession.connectionId,
+      offer.sdp,
+      true,
+      userSession.isSharingCamera,
+      userSession.isSharingScreen
+    );
   };
 
   // 重新创建发送端
@@ -298,7 +337,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
         />
 
         {!showVideo && (
-          <Avatar src={userSession.picture} style={styles.avatar} />
+          <Avatar src={userSession.userPicture} style={styles.avatar} />
         )}
 
         {!isSelf && <audio ref={audioRef} autoPlay muted={isSelf} />}
