@@ -150,7 +150,9 @@ const MeetingScreen: React.FC = React.memo(() => {
 
   const toggleScreen = (screenId?: string) => {
     if (selfUserSession) {
-      userSessionsRef.current[selfUserSession.id].toggleScreen(screenId);
+      userSessionsRef.current[selfUserSession.connectionId].toggleScreen(
+        screenId
+      );
     }
   };
 
@@ -184,7 +186,8 @@ const MeetingScreen: React.FC = React.memo(() => {
           <Box style={styles.sharingContainer}>
             <WebRTC
               ref={(ref: IWebRTCRef) => {
-                userSessionsRef.current[userThatShowingVideo.id] = ref;
+                userSessionsRef.current[userThatShowingVideo.connectionId] =
+                  ref;
               }}
               userSession={userThatShowingVideo}
               isSelf={userThatShowingVideo.isSelf}
