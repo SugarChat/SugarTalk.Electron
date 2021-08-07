@@ -11,17 +11,19 @@ import Api from '../../services/api';
 
 export interface IUserSession {
   id: string;
+  connectionId: string;
   userName: string;
   isSelf: boolean;
-  avatar: string;
+  userPicture: string;
   isSharingScreen: boolean;
   isSharingCamera: boolean;
 }
 
 interface IUser {
   id: string;
+  connectionId: string;
   userName: string;
-  avatar: string;
+  userPicture: string;
 }
 
 const MeetingScreen: React.FC = React.memo(() => {
@@ -38,10 +40,10 @@ const MeetingScreen: React.FC = React.memo(() => {
   const createUserSession = (user: IUser, isSelf: boolean) => {
     const userSession: IUserSession = {
       id: user.id,
+      connectionId: user.connectionId,
       userName: user.userName,
       isSelf,
-      avatar:
-        'https://lwlies.com/wp-content/uploads/2017/04/avatar-2009-1108x0-c-default.jpg',
+      userPicture: user.userPicture,
       isSharingCamera: false,
       isSharingScreen: false,
     };
@@ -52,10 +54,10 @@ const MeetingScreen: React.FC = React.memo(() => {
     ]);
   };
 
-  const removeUserSession = (id: string) => {
+  const removeUserSession = (connectionId: string) => {
     setUserSessions((oldUserSessions: IUserSession[]) =>
       oldUserSessions.filter(
-        (userSession: IUserSession) => userSession.id !== id
+        (userSession: IUserSession) => userSession.connectionId !== connectionId
       )
     );
   };
@@ -141,13 +143,15 @@ const MeetingScreen: React.FC = React.memo(() => {
 
   const toggleVideo = () => {
     if (selfUserSession) {
-      userSessionsRef.current[selfUserSession.id].toggleVideo();
+      userSessionsRef.current[selfUserSession.connectionId].toggleVideo();
     }
   };
 
   const toggleScreen = (screenId?: string) => {
     if (selfUserSession) {
-      userSessionsRef.current[selfUserSession.id].toggleScreen(screenId);
+      userSessionsRef.current[selfUserSession.connectionId].toggleScreen(
+        screenId
+      );
     }
   };
 
@@ -165,7 +169,7 @@ const MeetingScreen: React.FC = React.memo(() => {
             return (
               <WebRTC
                 ref={(ref: IWebRTCRef) => {
-                  userSessionsRef.current[userSession.id] = ref;
+                  userSessionsRef.current[userSession.connectionId] = ref;
                 }}
                 key={key.toString()}
                 userSession={userSession}
@@ -181,7 +185,8 @@ const MeetingScreen: React.FC = React.memo(() => {
           <Box style={styles.sharingContainer}>
             <WebRTC
               ref={(ref: IWebRTCRef) => {
-                userSessionsRef.current[userThatShowingVideo.id] = ref;
+                userSessionsRef.current[userThatShowingVideo.connectionId] =
+                  ref;
               }}
               userSession={userThatShowingVideo}
               isSelf={userThatShowingVideo.isSelf}
