@@ -8,16 +8,7 @@ import { IWebRTCRef, WebRTC } from './components/web-rtc';
 import { MeetingContext, MeetingProvider } from './context';
 import { VerticalUserList } from './components/vertical-user-list';
 import Api from '../../services/api';
-
-export interface IUserSession {
-  id: string;
-  connectionId: string;
-  userName: string;
-  isSelf: boolean;
-  userPicture: string;
-  isSharingScreen: boolean;
-  isSharingCamera: boolean;
-}
+import { IUserSession } from '../../dtos/schedule-meeting-command';
 
 interface IUser {
   id: string;
@@ -110,13 +101,22 @@ const MeetingScreen: React.FC = React.memo(() => {
         isSharingCamera: boolean,
         isSharingScreen: boolean
       ) => {
-        console.log('----new answer----');
+        console.log('----new offer----');
 
         const meetingSessionDto = await Api.meeting.getMeetingSession({
           meetingNumber,
         });
 
-        console.log(meetingSessionDto);
+        const newUserSessions = Object.entries(
+          meetingSessionDto.data.userSessions
+        ).map((key, v) => {
+          return key[1];
+        });
+
+        console.log(newUserSessions);
+        console.log(userSessions);
+        setUserSessions(newUserSessions);
+
         if (userSessionsRef.current[connectionId]) {
           userSessionsRef.current[connectionId].onNewOfferCreated(
             connectionId,

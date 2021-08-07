@@ -1,7 +1,7 @@
 import { Avatar, Box } from '@material-ui/core';
 import { useLockFn } from 'ahooks';
 import React from 'react';
-import { IUserSession } from '../..';
+import { IUserSession } from '../../../../dtos/schedule-meeting-command';
 import { MeetingContext } from '../../context';
 import * as styles from './styles';
 
@@ -212,6 +212,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
       await resumePeerSendonly();
       setVideo(false);
     } else {
+      console.log('----toggle----');
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
@@ -265,7 +266,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
     isSharingCamera: boolean,
     isSharingScreen: boolean
   ) => {
-    console.log('------333---');
+    console.log('------333---', isSharingScreen, isSharingCamera);
     rtcPeerConnection?.current?.setRemoteDescription(
       new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
     );

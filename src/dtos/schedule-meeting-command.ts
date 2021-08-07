@@ -22,14 +22,15 @@ export interface MeetingSession {
   meetingId: string;
   meetingNumber: string;
   meetingType: MeetingType;
-  userSessions: Record<string, UserSession>;
+  userSessions: Record<string, IUserSession>;
 }
 
-export interface UserSession {
+export interface IUserSession {
   id: string;
-  userid: string;
-  username: string;
-  avatar: string;
+  connectionId: string;
+  userName: string;
+  isSelf: boolean;
+  userPicture: string;
   isSharingScreen: boolean;
   isSharingCamera: boolean;
 }
