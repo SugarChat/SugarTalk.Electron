@@ -9,7 +9,11 @@ import {
   getMediaDeviceAccessAndStatus,
   showRequestMediaAccessDialog,
 } from '../../utils/media';
-import { IUserSession } from '../../dtos/schedule-meeting-command';
+import {
+  GetMeetingSessionRequest,
+  IUserSession,
+} from '../../dtos/schedule-meeting-command';
+import api from '../../services/api';
 
 export interface IMeetingQueryStringParams {
   meetingId: string;
@@ -37,15 +41,17 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const [video, setVideo] = React.useState<boolean>(false);
   const [screen, setScreen] = React.useState<boolean>(false);
   const [screenSelecting, setScreenSelecting] = React.useState<boolean>(false);
+  const [initialized, setinitialized] = React.useState<boolean>(false);
   const [userSessions, setUserSessions] = React.useState<IUserSession[]>([]);
+  const [meetingNumber, setmeetingNumber] = React.useState<string>('');
 
-  const [meetingNumber, setMeetingNumber] = React.useState<string>('');
   const serverConnection = React.useRef<HubConnection>();
   const location = useLocation();
   const { userStore } = useStores();
 
   React.useEffect(() => {
-    const meetingInfo = queryString.parse(location.search, {
+    // Basic info setup
+    const meetingParam = queryString.parse(location.search, {
       parseBooleans: true,
     }) as unknown as IMeetingQueryStringParams;
 
@@ -59,11 +65,39 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
     initMediaDeviceStatus();
 
-    setAudio(meetingInfo.connectedWithAudio);
+    setAudio(meetingParam.connectedWithAudio);
 
-    setMeetingNumber(meetingInfo.meetingId);
+    const request: GetMeetingSessionRequest = {
+      meetingNumber: meetingParam.meetingId,
+    };
+    api.meeting.getMeetingSession(request).then((response) => {
+      setUserSessions(response.data.allUserSessions);
+    });
 
-    const wsUrl = `${Env.apiUrl}meetingHub?username=${meetingInfo.userName}&meetingNumber=${meetingInfo.meetingId}`;
+    setupSignalrForMyself(meetingParam.userName, meetingParam.meetingId);
+
+    setmeetingNumber(meetingParam.meetingId);
+  }, []);
+
+  React.useEffect(() => {
+    if (userSessions.find((x) => x.isSelf)) {
+      // Up to this point, all existing users and myself should have been initialized on the server
+      setinitialized(true);
+    }
+  }, [userSessions]);
+
+  React.useEffect(() => {
+    if (initialized) {
+      setupSignalrForOthers();
+      console.log('----should createPeerConnection here-----', userSessions);
+      userSessions.forEach((userSession) => {
+        createPeerConnection(userSession, userSession.isSelf);
+      });
+    }
+  }, [initialized]);
+
+  const setupSignalrForMyself = (userName: string, meetingId: string) => {
+    const wsUrl = `${Env.apiUrl}meetingHub?username=${userName}&meetingNumber=${meetingId}`;
     serverConnection.current = new HubConnectionBuilder()
       .withUrl(wsUrl, { accessTokenFactory: () => userStore.idToken })
       .build();
@@ -75,26 +109,19 @@ export const MeetingProvider: React.FC = ({ children }) => {
       }
     });
 
+    serverConnection?.current?.on('SetLocalUser', (localUser: IUserSession) => {
+      createUserSession(localUser, true);
+    });
+
     serverConnection.current?.start().catch((err?: any) => {
       if (err?.statusCode === 401) {
         alert('Unauthorized.');
         electron.remote.getCurrentWindow().close();
       }
     });
+  };
 
-    serverConnection?.current?.on('SetLocalUser', (localUser: IUserSession) => {
-      createUserSession(localUser, true);
-    });
-
-    serverConnection?.current?.on(
-      'SetOtherUsers',
-      (otherUsers: IUserSession[]) => {
-        otherUsers.forEach((user: IUserSession) => {
-          createUserSession(user, false);
-        });
-      }
-    );
-
+  const setupSignalrForOthers = () => {
     serverConnection?.current?.on('OtherJoined', (otherUser: IUserSession) => {
       createUserSession(otherUser, false);
     });
@@ -131,18 +158,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
     );
 
     serverConnection?.current?.on(
-      'NewOfferCreated',
-      async (
-        connectionId: string,
-        answerSDP: string,
-        isSharingCamera: boolean,
-        isSharingScreen: boolean
-      ) => {
-        // Empty on purpose
-      }
-    );
-
-    serverConnection?.current?.on(
       'AddCandidate',
       (connectionId: string, candidate: string) => {
         const objCandidate = JSON.parse(candidate);
@@ -167,11 +182,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
         }
       }
     );
-
-    return () => {
-      serverConnection.current?.stop();
-    };
-  }, []);
+  };
 
   const createUserSession = async (user: IUserSession, isSelf: boolean) => {
     const userSession: IUserSession = {
@@ -186,8 +197,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
       recvOnlyPeerConnections: [],
       sdp: '',
     };
-
-    await createPeerConnection(userSession, isSelf);
 
     setUserSessions((oldUserSessions: IUserSession[]) => [
       ...oldUserSessions,

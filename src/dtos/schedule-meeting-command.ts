@@ -23,6 +23,7 @@ export interface MeetingSession {
   meetingNumber: string;
   meetingType: MeetingType;
   userSessions: Record<string, IUserSession>;
+  allUserSessions: IUserSession[];
 }
 
 export interface IUserSession {
