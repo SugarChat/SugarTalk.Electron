@@ -90,9 +90,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
     if (initialized) {
       setupSignalrForOthers();
       console.log('----should createPeerConnection here-----', userSessions);
-      userSessions.forEach((userSession) => {
-        createPeerConnection(userSession, userSession.isSelf);
-      });
+
+      for (let i = 0; i < userSessions.length; i++) {
+        createPeerConnection(userSessions[i], userSessions[i].isSelf);
+      }
     }
   }, [initialized]);
 
@@ -140,11 +141,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
       ) => {
         console.log('---process answser----');
         const isSelf = connectionId === serverConnection.current?.connectionId;
-
+        const matchedUserSession = userSessions.find(
+          (x) => x.connectionId === connectionId
+        );
         if (!isSelf) {
-          const matchedUserSession = userSessions.find(
-            (x) => x.connectionId === connectionId
-          );
           if (matchedUserSession) {
             const matchedPeerConnection =
               matchedUserSession.recvOnlyPeerConnections.find(
@@ -154,6 +154,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
               new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
             );
           }
+        } else {
+          matchedUserSession?.sendOnlyPeerConnection?.setRemoteDescription(
+            new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
+          );
         }
       }
     );
@@ -161,19 +165,18 @@ export const MeetingProvider: React.FC = ({ children }) => {
     serverConnection?.current?.on(
       'AddCandidate',
       (connectionId: string, candidate: string) => {
-        console.log(candidate);
         const objCandidate = JSON.parse(candidate);
         const isSelf = connectionId === serverConnection.current?.connectionId;
         const matchedUserSession = userSessions.find(
           (x) => x.connectionId === connectionId
         );
         if (matchedUserSession) {
-          //console.log('----matchedUserSession---');
           if (isSelf) {
-            //console.log('----isSelf---', matchedUserSession, objCandidate);
-            matchedUserSession.sendOnlyPeerConnection
-              ?.addIceCandidate(objCandidate)
-              .catch((e) => console.log(e));
+            if (matchedUserSession.sendOnlyPeerConnection) {
+              matchedUserSession.sendOnlyPeerConnection.addIceCandidate(
+                objCandidate
+              );
+            }
           } else {
             const matchedConnection =
               matchedUserSession.recvOnlyPeerConnections.find(
@@ -206,6 +209,9 @@ export const MeetingProvider: React.FC = ({ children }) => {
       ...oldUserSessions,
       userSession,
     ]);
+
+    // userSessions.push(userSession);
+    // setUserSessions(userSessions);
   };
 
   const createPeerConnection = async (
@@ -214,7 +220,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
   ) => {
     const peer = new RTCPeerConnection();
     peer.addEventListener('icecandidate', (candidate) => {
-      console.log('-----1111-----');
       serverConnection?.current?.invoke(
         'ProcessCandidateAsync',
         userSession.connectionId,
@@ -231,16 +236,16 @@ export const MeetingProvider: React.FC = ({ children }) => {
       });
 
       stream.getTracks().forEach((track: MediaStreamTrack) => {
-        if (track.kind === 'audio') track.enabled = audio;
-        peer.addTrack(track, stream);
+        if (track.kind === 'audio') track.enabled = true;
+        userSession.sendOnlyPeerConnection?.addTrack(track, stream);
       });
 
-      const offer = await peer.createOffer({
+      const offer = await userSession.sendOnlyPeerConnection.createOffer({
         offerToReceiveAudio: false,
         offerToReceiveVideo: false,
       });
 
-      await peer.setLocalDescription(offer);
+      await userSession.sendOnlyPeerConnection.setLocalDescription(offer);
 
       await serverConnection?.current?.invoke(
         'ProcessOfferAsync',
