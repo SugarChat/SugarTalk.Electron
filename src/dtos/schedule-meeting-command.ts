@@ -34,6 +34,11 @@ export interface IUserSession {
   isSharingScreen: boolean;
   isSharingCamera: boolean;
   sendOnlyPeerConnection: RTCPeerConnection | undefined;
-  recvOnlyPeerConnections: RTCPeerConnection[];
+  recvOnlyPeerConnections: IUserRTCPeerConnection[];
   sdp: string;
+}
+
+export interface IUserRTCPeerConnection {
+  connectionId: string;
+  peerConnection: RTCPeerConnection;
 }

@@ -111,21 +111,21 @@ export const MeetingProvider: React.FC = ({ children }) => {
         isSharingCamera: boolean,
         isSharingScreen: boolean
       ) => {
-        const matchedUserSession = userSessions.find(
-          (x) => x.connectionId === connectionId
-        );
-        if (matchedUserSession) {
-          const updatedUserSession = {
-            ...matchedUserSession,
-            isSharingCamera,
-            isSharingScreen,
-            sdp: answerSDP,
-          };
-          const newUserSessions: IUserSession[] = [
-            ...userSessions.filter((x) => x.connectionId !== connectionId),
-            updatedUserSession,
-          ];
-          setUserSessions(newUserSessions);
+        const isSelf = connectionId === serverConnection.current?.connectionId;
+
+        if (!isSelf) {
+          const matchedUserSession = userSessions.find(
+            (x) => x.connectionId === connectionId
+          );
+          if (matchedUserSession) {
+            const matchedPeerConnection =
+              matchedUserSession.recvOnlyPeerConnections.find(
+                (x) => x.connectionId === connectionId
+              );
+            matchedPeerConnection?.peerConnection.setRemoteDescription(
+              new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
+            );
+          }
         }
       }
     );
@@ -138,38 +138,32 @@ export const MeetingProvider: React.FC = ({ children }) => {
         isSharingCamera: boolean,
         isSharingScreen: boolean
       ) => {
-        const meetingSessionDto = await Api.meeting.getMeetingSession({
-          meetingNumber,
-        });
-
-        const newUserSessions = Object.entries(
-          meetingSessionDto.data.userSessions
-        ).map((key, v) => {
-          return key[1];
-        }) as IUserSession[];
-
-        setUserSessions(newUserSessions);
-
-        if (userSessionsRef.current[connectionId]) {
-          userSessionsRef.current[connectionId].onNewOfferCreated(
-            connectionId,
-            answerSDP,
-            isSharingCamera,
-            isSharingScreen
-          );
-        }
+        // Empty on purpose
       }
     );
 
     serverConnection?.current?.on(
       'AddCandidate',
       (connectionId: string, candidate: string) => {
-        // TODO: Find the matched usersession, set the iceCandidate to the RTCPeerConnection
-        if (userSessionsRef.current[connectionId]) {
-          userSessionsRef.current[connectionId].onAddCandidate(
-            connectionId,
-            candidate
-          );
+        const objCandidate = JSON.parse(candidate);
+        const isSelf = connectionId === serverConnection.current?.connectionId;
+        const matchedUserSession = userSessions.find(
+          (x) => x.connectionId === connectionId
+        );
+        if (matchedUserSession) {
+          if (isSelf) {
+            matchedUserSession.sendOnlyPeerConnection?.addIceCandidate(
+              objCandidate
+            );
+          } else {
+            const matchedConnection =
+              matchedUserSession.recvOnlyPeerConnections.find(
+                (x) => x.connectionId === connectionId
+              );
+            if (matchedConnection) {
+              matchedConnection.peerConnection.addIceCandidate(objCandidate);
+            }
+          }
         }
       }
     );
@@ -193,6 +187,18 @@ export const MeetingProvider: React.FC = ({ children }) => {
       sdp: '',
     };
 
+    await createPeerConnection(userSession, isSelf);
+
+    setUserSessions((oldUserSessions: IUserSession[]) => [
+      ...oldUserSessions,
+      userSession,
+    ]);
+  };
+
+  const createPeerConnection = async (
+    userSession: IUserSession,
+    isSelf: boolean
+  ) => {
     const peer = new RTCPeerConnection();
     peer.addEventListener('icecandidate', (candidate) => {
       serverConnection?.current?.invoke(
@@ -248,14 +254,9 @@ export const MeetingProvider: React.FC = ({ children }) => {
       );
       userSession.recvOnlyPeerConnections = [
         ...userSession.recvOnlyPeerConnections,
-        peer,
+        { connectionId: userSession.connectionId, peerConnection: peer },
       ];
     }
-
-    setUserSessions((oldUserSessions: IUserSession[]) => [
-      ...oldUserSessions,
-      userSession,
-    ]);
   };
 
   const removeUserSession = (connectionId: string) => {
