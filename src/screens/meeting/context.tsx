@@ -138,6 +138,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
         isSharingCamera: boolean,
         isSharingScreen: boolean
       ) => {
+        console.log('---process answser----');
         const isSelf = connectionId === serverConnection.current?.connectionId;
 
         if (!isSelf) {
@@ -160,16 +161,19 @@ export const MeetingProvider: React.FC = ({ children }) => {
     serverConnection?.current?.on(
       'AddCandidate',
       (connectionId: string, candidate: string) => {
+        console.log(candidate);
         const objCandidate = JSON.parse(candidate);
         const isSelf = connectionId === serverConnection.current?.connectionId;
         const matchedUserSession = userSessions.find(
           (x) => x.connectionId === connectionId
         );
         if (matchedUserSession) {
+          //console.log('----matchedUserSession---');
           if (isSelf) {
-            matchedUserSession.sendOnlyPeerConnection?.addIceCandidate(
-              objCandidate
-            );
+            //console.log('----isSelf---', matchedUserSession, objCandidate);
+            matchedUserSession.sendOnlyPeerConnection
+              ?.addIceCandidate(objCandidate)
+              .catch((e) => console.log(e));
           } else {
             const matchedConnection =
               matchedUserSession.recvOnlyPeerConnections.find(
@@ -210,6 +214,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
   ) => {
     const peer = new RTCPeerConnection();
     peer.addEventListener('icecandidate', (candidate) => {
+      console.log('-----1111-----');
       serverConnection?.current?.invoke(
         'ProcessCandidateAsync',
         userSession.connectionId,
