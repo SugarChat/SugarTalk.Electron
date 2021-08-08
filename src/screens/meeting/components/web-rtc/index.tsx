@@ -37,11 +37,6 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
 
   const rtcPeerConnection = React.useRef<RTCPeerConnection>();
 
-  const [fullScreen, setFullScreen] = React.useState<boolean>(false);
-
-  const [videoWidth, setVideoWidth] = React.useState<number>(200);
-  const [videoHeight, setVideoHeight] = React.useState<number>(200);
-
   const maxVideoWidth: number = 800;
   const maxVideoHeight: number = 800;
 
@@ -63,7 +58,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
     const peer = new RTCPeerConnection();
 
     peer.addEventListener('addstream', (e: any) => {
-      videoRef.current.srcObject = e.stream;
+      //videoRef.current.srcObject = e.stream;
       audioRef.current.srcObject = e.stream;
     });
 
@@ -121,7 +116,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
       peer.addTrack(track, stream);
     });
 
-    videoRef.current.srcObject = stream;
+    //videoRef.current.srcObject = stream;
 
     const offer = await peer.createOffer({
       offerToReceiveAudio: false,
@@ -174,7 +169,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
       });
     }
 
-    videoRef.current.srcObject = stream;
+    // videoRef.current.srcObject = stream;
 
     const offer = await peer.createOffer({
       offerToReceiveAudio: false,
@@ -270,13 +265,6 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
     rtcPeerConnection?.current?.setRemoteDescription(
       new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
     );
-    if (isSharingScreen || isSharingCamera) {
-      setVideoWidth(800);
-      setVideoHeight(800);
-    } else {
-      setVideoWidth(200);
-      setVideoHeight(200);
-    }
   };
 
   const onAddCandidate = (_connectionId: string, candidate: string) => {
@@ -319,15 +307,13 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
         .forEach((track: MediaStreamTrack) => {
           track.enabled = audio;
         });
-    } else if (!isSelf && videoRef.current?.srcObject) {
-      console.log('------111');
     }
   }, [audio, isSelf, videoRef.current?.srcObject]);
 
   const showVideo = userSession.isSharingCamera || userSession.isSharingScreen;
   return (
-    <>
-      <Box component="div" style={styles.videoContainer}>
+    <Box component="div" style={styles.videoContainer}>
+      {false && (
         <video
           ref={videoRef}
           autoPlay
@@ -336,18 +322,18 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
           style={styles.video}
           muted={isSelf}
         />
+      )}
 
-        {!showVideo && (
-          <Avatar src={userSession.userPicture} style={styles.avatar} />
-        )}
+      {!showVideo && (
+        <Avatar src={userSession.userPicture} style={styles.avatar} />
+      )}
 
-        {!isSelf && <audio ref={audioRef} autoPlay muted={isSelf} />}
-        {!showVideo && (
-          <Box component="div" style={styles.userName}>
-            {userSession.userName}
-          </Box>
-        )}
-      </Box>
-    </>
+      {!isSelf && <audio ref={audioRef} autoPlay muted={isSelf} />}
+      {!showVideo && (
+        <Box component="div" style={styles.userName}>
+          {userSession.userName}
+        </Box>
+      )}
+    </Box>
   );
 });

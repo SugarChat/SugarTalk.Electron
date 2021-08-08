@@ -33,4 +33,7 @@ export interface IUserSession {
   userPicture: string;
   isSharingScreen: boolean;
   isSharingCamera: boolean;
+  sendOnlyPeerConnection: RTCPeerConnection | undefined;
+  recvOnlyPeerConnections: RTCPeerConnection[];
+  sdp: string;
 }
