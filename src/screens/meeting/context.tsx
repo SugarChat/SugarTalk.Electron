@@ -92,6 +92,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
       console.log('----should createPeerConnection here-----', userSessions);
 
       for (let i = 0; i < userSessions.length; i++) {
+        userSessions[i].recvOnlyPeerConnections = [];
         createPeerConnection(userSessions[i], userSessions[i].isSelf);
       }
     }
@@ -147,7 +148,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
         if (!isSelf) {
           if (matchedUserSession) {
             const matchedPeerConnection =
-              matchedUserSession.recvOnlyPeerConnections?.find(
+              matchedUserSession.recvOnlyPeerConnections.find(
                 (x) => x.connectionId === connectionId
               );
             matchedPeerConnection?.peerConnection.setRemoteDescription(
@@ -230,14 +231,23 @@ export const MeetingProvider: React.FC = ({ children }) => {
     peer.addEventListener(
       'track',
       (e) => {
-        console.log('track fire');
-        if (e.track.kind === 'aduio') {
+        if (e.track.kind === 'audio') {
           const stream = e.streams[0];
           userSession.audioStream = stream;
+          setUserSessions(
+            userSessions.map((session) =>
+              session.connectionId === userSession.connectionId
+                ? { ...userSession }
+                : session
+            )
+          );
         }
       },
       false
     );
+    peer.addEventListener('addstream', (e: any) => {
+      userSession.audioStream = e.stream;
+    });
     if (isSelf) {
       userSession.sendOnlyPeerConnection = peer;
 
@@ -274,6 +284,11 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
       await peer.setLocalDescription(offer);
 
+      userSession.recvOnlyPeerConnections = [
+        ...userSession.recvOnlyPeerConnections,
+        { connectionId: userSession.connectionId, peerConnection: peer },
+      ];
+
       await serverConnection?.current?.invoke(
         'ProcessOfferAsync',
         userSession.connectionId,
@@ -282,12 +297,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
         userSession.isSharingCamera,
         userSession.isSharingScreen
       );
-      if (userSession.recvOnlyPeerConnections === undefined)
-        userSession.recvOnlyPeerConnections = [];
-      userSession.recvOnlyPeerConnections = [
-        ...userSession.recvOnlyPeerConnections,
-        { connectionId: userSession.connectionId, peerConnection: peer },
-      ];
     }
   };
 

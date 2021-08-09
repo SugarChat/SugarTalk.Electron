@@ -23,9 +23,7 @@ const MeetingScreen: React.FC = React.memo(() => {
     React.useContext(MeetingContext);
 
   const toggleVideo = () => {
-    // if (selfUserSession) {
-    //   userSessionsRef.current[selfUserSession.connectionId].toggleVideo();
-    // }
+    console.log(userSessions);
   };
 
   const toggleScreen = (screenId?: string) => {
@@ -42,8 +40,9 @@ const MeetingScreen: React.FC = React.memo(() => {
 
       <Box style={styles.webRTCContainer}>
         {userSessions.map((userSession, key) => {
+          console.log(userSession.audioStream);
           return (
-            <div key={key.toString()}>
+            <Box key={userSession.id.toString()}>
               <UserCard
                 key={key.toString()}
                 userSession={userSession}
@@ -60,7 +59,7 @@ const MeetingScreen: React.FC = React.memo(() => {
                   autoPlay
                 />
               )}
-            </div>
+            </Box>
           );
         })}
       </Box>
