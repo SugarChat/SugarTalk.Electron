@@ -36,6 +36,7 @@ export interface IUserSession {
   isSharingCamera: boolean;
   sendOnlyPeerConnection: RTCPeerConnection | undefined;
   recvOnlyPeerConnections: IUserRTCPeerConnection[];
+  audioStream: MediaStream | undefined;
   sdp: string;
 }
 

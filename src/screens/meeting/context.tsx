@@ -147,7 +147,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
         if (!isSelf) {
           if (matchedUserSession) {
             const matchedPeerConnection =
-              matchedUserSession.recvOnlyPeerConnections.find(
+              matchedUserSession.recvOnlyPeerConnections?.find(
                 (x) => x.connectionId === connectionId
               );
             matchedPeerConnection?.peerConnection.setRemoteDescription(
@@ -179,7 +179,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
             }
           } else {
             const matchedConnection =
-              matchedUserSession.recvOnlyPeerConnections.find(
+              matchedUserSession.recvOnlyPeerConnections?.find(
                 (x) => x.connectionId === connectionId
               );
             if (matchedConnection) {
@@ -202,6 +202,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
       isSharingScreen: false,
       sendOnlyPeerConnection: undefined,
       recvOnlyPeerConnections: [],
+      audioStream: null,
       sdp: '',
     };
 
@@ -226,7 +227,17 @@ export const MeetingProvider: React.FC = ({ children }) => {
         candidate
       );
     });
-
+    peer.addEventListener(
+      'track',
+      (e) => {
+        console.log('track fire');
+        if (e.track.kind === 'aduio') {
+          const stream = e.streams[0];
+          userSession.audioStream = stream;
+        }
+      },
+      false
+    );
     if (isSelf) {
       userSession.sendOnlyPeerConnection = peer;
 
@@ -271,6 +282,8 @@ export const MeetingProvider: React.FC = ({ children }) => {
         userSession.isSharingCamera,
         userSession.isSharingScreen
       );
+      if (userSession.recvOnlyPeerConnections === undefined)
+        userSession.recvOnlyPeerConnections = [];
       userSession.recvOnlyPeerConnections = [
         ...userSession.recvOnlyPeerConnections,
         { connectionId: userSession.connectionId, peerConnection: peer },

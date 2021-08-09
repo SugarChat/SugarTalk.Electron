@@ -43,18 +43,27 @@ const MeetingScreen: React.FC = React.memo(() => {
       <Box style={styles.webRTCContainer}>
         {userSessions.map((userSession, key) => {
           return (
-            <UserCard
-              key={key.toString()}
-              userSession={userSession}
-              isSelf={
-                serverConnection?.current?.connectionId ===
-                userSession.connectionId
-              }
-            />
+            <div key={key.toString()}>
+              <UserCard
+                key={key.toString()}
+                userSession={userSession}
+                isSelf={
+                  serverConnection?.current?.connectionId ===
+                  userSession.connectionId
+                }
+              />
+              {userSession.audioStream && !userSession.isSelf && (
+                <audio
+                  ref={(audio) => {
+                    audio.srcObject = userSession.audioStream;
+                  }}
+                  autoPlay
+                />
+              )}
+            </div>
           );
         })}
       </Box>
-
       <FooterToolbar toggleVideo={toggleVideo} toggleScreen={toggleScreen} />
     </PageScreen>
   );
