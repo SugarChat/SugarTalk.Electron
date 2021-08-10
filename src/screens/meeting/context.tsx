@@ -140,10 +140,12 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const setupSignalrForOthers = () => {
     serverConnection?.current?.on('OtherJoined', (otherUser: IUserSession) => {
       otherUser.isSelf = false;
+      otherUser.recvOnlyPeerConnections = [];
       setUserSessions((oldUserSessions: IUserSession[]) => [
         ...oldUserSessions,
         otherUser,
       ]);
+      createPeerConnection(otherUser, otherUser.isSelf);
     });
 
     serverConnection?.current?.on('OtherLeft', (connectionId: string) => {

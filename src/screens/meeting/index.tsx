@@ -23,9 +23,7 @@ const MeetingScreen: React.FC = React.memo(() => {
   const { serverConnection, meetingNumber, userSessions } =
     React.useContext(MeetingContext);
 
-  const toggleVideo = () => {
-    console.log(userSessions);
-  };
+  const toggleVideo = () => {};
 
   const toggleScreen = (screenId?: string) => {
     // if (selfUserSession) {
