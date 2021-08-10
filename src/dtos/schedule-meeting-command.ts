@@ -10,6 +10,10 @@ export interface ScheduleMeetingCommand {
   meetingType: MeetingType;
 }
 
+export interface JoinMeetingCommand {
+  meetingNumber: string;
+}
+
 export interface MeetingDto {
   meetingNumber: string;
 }
@@ -36,7 +40,7 @@ export interface IUserSession {
   isSharingCamera: boolean;
   sendOnlyPeerConnection: RTCPeerConnection | undefined;
   recvOnlyPeerConnections: IUserRTCPeerConnection[];
-  audioStream: MediaStream | undefined;
+  audioStream: MediaStream | null;
   sdp: string;
 }
 

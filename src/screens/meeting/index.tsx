@@ -10,6 +10,7 @@ import { VerticalUserList } from './components/vertical-user-list';
 import Api from '../../services/api';
 import { IUserSession } from '../../dtos/schedule-meeting-command';
 import { UserCard } from './components/user-card';
+import { GUID } from '../../utils/guid';
 
 interface IUser {
   id: string;
@@ -40,9 +41,8 @@ const MeetingScreen: React.FC = React.memo(() => {
 
       <Box style={styles.webRTCContainer}>
         {userSessions.map((userSession, key) => {
-          console.log(userSession.audioStream);
           return (
-            <Box key={userSession.id.toString()}>
+            <Box key={GUID()}>
               <UserCard
                 key={key.toString()}
                 userSession={userSession}

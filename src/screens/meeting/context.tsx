@@ -10,7 +10,7 @@ import {
   showRequestMediaAccessDialog,
 } from '../../utils/media';
 import {
-  GetMeetingSessionRequest,
+  JoinMeetingCommand,
   IUserSession,
 } from '../../dtos/schedule-meeting-command';
 import api from '../../services/api';
@@ -42,6 +42,8 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const [screen, setScreen] = React.useState<boolean>(false);
   const [screenSelecting, setScreenSelecting] = React.useState<boolean>(false);
   const [initialized, setinitialized] = React.useState<boolean>(false);
+  const [localUserAdded, setLocalUserAdded] = React.useState<boolean>(false);
+  const [otherUsersAdded, setOtherUsersAdded] = React.useState<boolean>(false);
   const [userSessions, setUserSessions] = React.useState<IUserSession[]>([]);
   const [meetingNumber, setmeetingNumber] = React.useState<string>('');
 
@@ -67,12 +69,11 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
     setAudio(meetingParam.connectedWithAudio);
 
-    const request: GetMeetingSessionRequest = {
+    const joinMeetingCommand: JoinMeetingCommand = {
       meetingNumber: meetingParam.meetingId,
     };
-    api.meeting.getMeetingSession(request).then((response) => {
-      setUserSessions(response.data.allUserSessions);
-    });
+
+    api.meeting.joinMeeting(joinMeetingCommand);
 
     setupSignalrForMyself(meetingParam.userName, meetingParam.meetingId);
 
@@ -80,17 +81,14 @@ export const MeetingProvider: React.FC = ({ children }) => {
   }, []);
 
   React.useEffect(() => {
-    if (userSessions.find((x) => x.isSelf)) {
-      // Up to this point, all existing users and myself should have been initialized on the server
+    if (localUserAdded && otherUsersAdded) {
       setinitialized(true);
     }
-  }, [userSessions]);
+  }, [localUserAdded, otherUsersAdded]);
 
   React.useEffect(() => {
     if (initialized) {
       setupSignalrForOthers();
-      console.log('----should createPeerConnection here-----', userSessions);
-
       for (let i = 0; i < userSessions.length; i++) {
         userSessions[i].recvOnlyPeerConnections = [];
         createPeerConnection(userSessions[i], userSessions[i].isSelf);
@@ -112,8 +110,24 @@ export const MeetingProvider: React.FC = ({ children }) => {
     });
 
     serverConnection?.current?.on('SetLocalUser', (localUser: IUserSession) => {
-      createUserSession(localUser, true);
+      localUser.isSelf = true;
+      setUserSessions((oldUserSessions: IUserSession[]) => [
+        ...oldUserSessions,
+        localUser,
+      ]);
+      setLocalUserAdded(true);
     });
+
+    serverConnection?.current?.on(
+      'SetOtherUsers',
+      (otherUsers: IUserSession[]) => {
+        setUserSessions((oldUserSessions: IUserSession[]) => [
+          ...oldUserSessions,
+          ...otherUsers,
+        ]);
+        setOtherUsersAdded(true);
+      }
+    );
 
     serverConnection.current?.start().catch((err?: any) => {
       if (err?.statusCode === 401) {
@@ -125,7 +139,11 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
   const setupSignalrForOthers = () => {
     serverConnection?.current?.on('OtherJoined', (otherUser: IUserSession) => {
-      createUserSession(otherUser, false);
+      otherUser.isSelf = false;
+      setUserSessions((oldUserSessions: IUserSession[]) => [
+        ...oldUserSessions,
+        otherUser,
+      ]);
     });
 
     serverConnection?.current?.on('OtherLeft', (connectionId: string) => {
@@ -192,30 +210,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
     );
   };
 
-  const createUserSession = async (user: IUserSession, isSelf: boolean) => {
-    const userSession: IUserSession = {
-      id: user.id,
-      connectionId: user.connectionId,
-      userName: user.userName,
-      isSelf,
-      userPicture: user.userPicture,
-      isSharingCamera: false,
-      isSharingScreen: false,
-      sendOnlyPeerConnection: undefined,
-      recvOnlyPeerConnections: [],
-      audioStream: null,
-      sdp: '',
-    };
-
-    setUserSessions((oldUserSessions: IUserSession[]) => [
-      ...oldUserSessions,
-      userSession,
-    ]);
-
-    // userSessions.push(userSession);
-    // setUserSessions(userSessions);
-  };
-
   const createPeerConnection = async (
     userSession: IUserSession,
     isSelf: boolean
@@ -245,9 +239,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
       },
       false
     );
-    peer.addEventListener('addstream', (e: any) => {
-      userSession.audioStream = e.stream;
-    });
     if (isSelf) {
       userSession.sendOnlyPeerConnection = peer;
 

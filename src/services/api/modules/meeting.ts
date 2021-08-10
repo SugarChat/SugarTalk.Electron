@@ -3,6 +3,7 @@ import {
   MeetingDto,
   MeetingSession,
   ScheduleMeetingCommand,
+  JoinMeetingCommand,
 } from '../../../dtos/schedule-meeting-command';
 import { SugarTalkResponse } from '../../../dtos/sugar-talk-response';
 import { api } from '../base-api';
@@ -13,6 +14,17 @@ export default {
   ): Promise<SugarTalkResponse<MeetingDto>> => {
     const response = await api.post<SugarTalkResponse<MeetingDto>>(
       '/meeting/schedule',
+      request
+    );
+
+    return response.data;
+  },
+
+  joinMeeting: async (
+    request: JoinMeetingCommand
+  ): Promise<SugarTalkResponse<MeetingSession>> => {
+    const response = await api.post<SugarTalkResponse<MeetingSession>>(
+      '/meeting/join',
       request
     );
 
