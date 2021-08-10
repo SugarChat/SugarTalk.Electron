@@ -39,7 +39,6 @@ const MeetingScreen: React.FC = React.memo(() => {
 
       <Box style={styles.webRTCContainer}>
         {userSessions.map((userSession, key) => {
-          console.log(userSession.audioStream);
           return (
             <Box key={GUID()}>
               <UserCard

@@ -42,49 +42,74 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const [screen, setScreen] = React.useState<boolean>(false);
   const [screenSelecting, setScreenSelecting] = React.useState<boolean>(false);
   const [initialized, setinitialized] = React.useState<boolean>(false);
+  const [meetingJoined, setMeetingJoined] = React.useState<boolean>(false);
   const [localUserAdded, setLocalUserAdded] = React.useState<boolean>(false);
   const [otherUsersAdded, setOtherUsersAdded] = React.useState<boolean>(false);
+  const [signalrConnected, setSignalrConnected] =
+    React.useState<boolean>(false);
   const [userSessions, setUserSessions] = React.useState<IUserSession[]>([]);
-  const [meetingNumber, setmeetingNumber] = React.useState<string>('');
-
+  const [meetingNumber, setMeetingNumber] = React.useState<string>('');
+  const [meetingParam, setMeetingParam] =
+    React.useState<IMeetingQueryStringParams>();
   const serverConnection = React.useRef<HubConnection>();
   const location = useLocation();
   const { userStore } = useStores();
+  const userSessionConnections: IUserSessionConnection[] = [];
 
   React.useEffect(() => {
-    // Basic info setup
-    const meetingParam = queryString.parse(location.search, {
+    const params = queryString.parse(location.search, {
       parseBooleans: true,
     }) as unknown as IMeetingQueryStringParams;
+    setMeetingParam(params);
+    setMeetingNumber(params.meetingId);
+  }, [location.search]);
 
-    const initMediaDeviceStatus = async () => {
-      const hasMicrophone = await getMediaDeviceAccessAndStatus('microphone');
-      if (hasMicrophone === false) {
-        showRequestMediaAccessDialog();
-        electron.remote.getCurrentWindow().close();
-      }
-    };
+  React.useEffect(() => {
+    if (meetingParam) {
+      const initMediaDeviceStatus = async () => {
+        const hasMicrophone = await getMediaDeviceAccessAndStatus('microphone');
+        if (hasMicrophone === false) {
+          showRequestMediaAccessDialog();
+          electron.remote.getCurrentWindow().close();
+        }
+      };
 
-    initMediaDeviceStatus();
+      initMediaDeviceStatus();
 
-    setAudio(meetingParam.connectedWithAudio);
+      setAudio(meetingParam.connectedWithAudio);
 
-    const joinMeetingCommand: JoinMeetingCommand = {
-      meetingNumber: meetingParam.meetingId,
-    };
+      const joinTheMeeting = async () => {
+        const joinMeetingCommand: JoinMeetingCommand = {
+          meetingNumber: meetingParam.meetingId,
+        };
+        await api.meeting.joinMeeting(joinMeetingCommand).then(() => {
+          setMeetingJoined(true);
+        });
+      };
 
-    api.meeting.joinMeeting(joinMeetingCommand);
+      joinTheMeeting();
+    }
+  }, [meetingParam]);
 
-    setupSignalrForMyself(meetingParam.userName, meetingParam.meetingId);
+  React.useEffect(() => {
+    if (meetingJoined && meetingParam) {
+      connectSignalr(meetingParam.userName, meetingParam.meetingId);
+    }
+  }, [meetingJoined]);
 
-    setmeetingNumber(meetingParam.meetingId);
-  }, []);
+  React.useEffect(() => {
+    if (signalrConnected) {
+      setupSignalr();
+    }
+  }, [signalrConnected]);
 
   React.useEffect(() => {
     if (localUserAdded && otherUsersAdded) {
       setinitialized(true);
     }
   }, [localUserAdded, otherUsersAdded]);
+
+  React.useEffect(() => {}, [userSessions]);
 
   React.useEffect(() => {
     if (initialized) {
@@ -96,20 +121,26 @@ export const MeetingProvider: React.FC = ({ children }) => {
     }
   }, [initialized]);
 
-  const setupSignalrForMyself = (userName: string, meetingId: string) => {
+  const connectSignalr = (userName: string, meetingId: string) => {
     const wsUrl = `${Env.apiUrl}meetingHub?username=${userName}&meetingNumber=${meetingId}`;
     serverConnection.current = new HubConnectionBuilder()
       .withUrl(wsUrl, { accessTokenFactory: () => userStore.idToken })
       .build();
+    serverConnection.current
+      ?.start()
+      .then(() => {
+        setSignalrConnected(true);
+      })
+      .catch((err?: any) => {
+        if (err?.statusCode === 401) {
+          alert('Unauthorized.');
+          electron.remote.getCurrentWindow().close();
+        }
+      });
+  };
 
-    serverConnection.current.onclose((error?: Error) => {
-      if (error?.message.includes('MeetingNotFoundException')) {
-        alert('Meeting not found.');
-        electron.remote.getCurrentWindow().close();
-      }
-    });
-
-    serverConnection?.current?.on('SetLocalUser', (localUser: IUserSession) => {
+  const setupSignalr = () => {
+    serverConnection.current?.on('SetLocalUser', (localUser: IUserSession) => {
       localUser.isSelf = true;
       setUserSessions((oldUserSessions: IUserSession[]) => [
         ...oldUserSessions,
@@ -118,7 +149,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
       setLocalUserAdded(true);
     });
 
-    serverConnection?.current?.on(
+    serverConnection.current?.on(
       'SetOtherUsers',
       (otherUsers: IUserSession[]) => {
         setUserSessions((oldUserSessions: IUserSession[]) => [
@@ -129,15 +160,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
       }
     );
 
-    serverConnection.current?.start().catch((err?: any) => {
-      if (err?.statusCode === 401) {
-        alert('Unauthorized.');
-        electron.remote.getCurrentWindow().close();
-      }
-    });
-  };
-
-  const setupSignalrForOthers = () => {
     serverConnection?.current?.on('OtherJoined', (otherUser: IUserSession) => {
       otherUser.isSelf = false;
       otherUser.recvOnlyPeerConnections = [];
@@ -152,6 +174,15 @@ export const MeetingProvider: React.FC = ({ children }) => {
       removeUserSession(connectionId);
     });
 
+    serverConnection.current?.onclose((error?: Error) => {
+      if (error?.message.includes('MeetingNotFoundException')) {
+        alert('Meeting not found.');
+        electron.remote.getCurrentWindow().close();
+      }
+    });
+  };
+
+  const setupSignalrForOthers = () => {
     serverConnection?.current?.on(
       'ProcessAnswer',
       async (
@@ -161,6 +192,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
         isSharingScreen: boolean
       ) => {
         console.log('---process answser----');
+        console.log(userSessions);
         const isSelf = connectionId === serverConnection.current?.connectionId;
         const matchedUserSession = userSessions.find(
           (x) => x.connectionId === connectionId

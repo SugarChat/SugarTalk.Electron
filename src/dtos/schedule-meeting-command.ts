@@ -44,6 +44,13 @@ export interface IUserSession {
   sdp: string;
 }
 
+export interface IUserSessionConnection {
+  id: string;
+  connectionId: string;
+  sendOnlyPeerConnection: RTCPeerConnection | undefined;
+  recvOnlyPeerConnections: IUserRTCPeerConnection[];
+}
+
 export interface IUserRTCPeerConnection {
   connectionId: string;
   peerConnection: RTCPeerConnection;
