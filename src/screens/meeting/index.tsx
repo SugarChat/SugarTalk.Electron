@@ -41,6 +41,7 @@ const MeetingScreen: React.FC = React.memo(() => {
 
       <Box style={styles.webRTCContainer}>
         {userSessions.map((userSession, key) => {
+          console.log(userSession.audioStream);
           return (
             <Box key={GUID()}>
               <UserCard
@@ -54,7 +55,7 @@ const MeetingScreen: React.FC = React.memo(() => {
               {userSession.audioStream && !userSession.isSelf && (
                 <audio
                   ref={(audio) => {
-                    audio.srcObject = userSession.audioStream;
+                    if (audio) audio.srcObject = userSession.audioStream;
                   }}
                   autoPlay
                 />
