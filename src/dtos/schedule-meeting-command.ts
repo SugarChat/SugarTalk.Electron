@@ -38,14 +38,12 @@ export interface IUserSession {
   userPicture: string;
   isSharingScreen: boolean;
   isSharingCamera: boolean;
-  sendOnlyPeerConnection: RTCPeerConnection | undefined;
-  recvOnlyPeerConnections: IUserRTCPeerConnection[];
   audioStream: MediaStream | null;
   sdp: string;
 }
 
 export interface IUserSessionConnection {
-  id: string;
+  userSessionId: string;
   connectionId: string;
   sendOnlyPeerConnection: RTCPeerConnection | undefined;
   recvOnlyPeerConnections: IUserRTCPeerConnection[];

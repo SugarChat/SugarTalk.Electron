@@ -12,6 +12,8 @@ import {
 import {
   JoinMeetingCommand,
   IUserSession,
+  IUserSessionConnection,
+  IUserRTCPeerConnection,
 } from '../../dtos/schedule-meeting-command';
 import api from '../../services/api';
 
@@ -54,7 +56,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const serverConnection = React.useRef<HubConnection>();
   const location = useLocation();
   const { userStore } = useStores();
-  const userSessionConnections: IUserSessionConnection[] = [];
+  const userSessionConnections = React.useRef<IUserSessionConnection[]>([]);
 
   React.useEffect(() => {
     const params = queryString.parse(location.search, {
@@ -109,13 +111,14 @@ export const MeetingProvider: React.FC = ({ children }) => {
     }
   }, [localUserAdded, otherUsersAdded]);
 
-  React.useEffect(() => {}, [userSessions]);
+  React.useEffect(() => {
+    console.log('effer', userSessions);
+  }, [userSessions]);
 
   React.useEffect(() => {
     if (initialized) {
-      setupSignalrForOthers();
+      console.log('user', userSessions);
       for (let i = 0; i < userSessions.length; i++) {
-        userSessions[i].recvOnlyPeerConnections = [];
         createPeerConnection(userSessions[i], userSessions[i].isSelf);
       }
     }
@@ -152,6 +155,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
     serverConnection.current?.on(
       'SetOtherUsers',
       (otherUsers: IUserSession[]) => {
+        otherUsers.forEach((user, index, array) => {
+          user.isSelf = false;
+          array[index] = user;
+        });
         setUserSessions((oldUserSessions: IUserSession[]) => [
           ...oldUserSessions,
           ...otherUsers,
@@ -162,11 +169,12 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
     serverConnection?.current?.on('OtherJoined', (otherUser: IUserSession) => {
       otherUser.isSelf = false;
-      otherUser.recvOnlyPeerConnections = [];
+      console.log('other joined', userSessions);
       setUserSessions((oldUserSessions: IUserSession[]) => [
         ...oldUserSessions,
         otherUser,
       ]);
+      console.log('other joined', userSessions);
       createPeerConnection(otherUser, otherUser.isSelf);
     });
 
@@ -174,15 +182,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
       removeUserSession(connectionId);
     });
 
-    serverConnection.current?.onclose((error?: Error) => {
-      if (error?.message.includes('MeetingNotFoundException')) {
-        alert('Meeting not found.');
-        electron.remote.getCurrentWindow().close();
-      }
-    });
-  };
-
-  const setupSignalrForOthers = () => {
     serverConnection?.current?.on(
       'ProcessAnswer',
       async (
@@ -192,15 +191,15 @@ export const MeetingProvider: React.FC = ({ children }) => {
         isSharingScreen: boolean
       ) => {
         console.log('---process answser----');
-        console.log(userSessions);
+        console.log('ProcessAnswer', userSessionConnections);
         const isSelf = connectionId === serverConnection.current?.connectionId;
-        const matchedUserSession = userSessions.find(
+        const matchedSessionConnection = userSessionConnections.current.find(
           (x) => x.connectionId === connectionId
         );
         if (!isSelf) {
-          if (matchedUserSession) {
+          if (matchedSessionConnection) {
             const matchedPeerConnection =
-              matchedUserSession.recvOnlyPeerConnections.find(
+              matchedSessionConnection.recvOnlyPeerConnections.find(
                 (x) => x.connectionId === connectionId
               );
             matchedPeerConnection?.peerConnection.setRemoteDescription(
@@ -208,7 +207,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
             );
           }
         } else {
-          matchedUserSession?.sendOnlyPeerConnection?.setRemoteDescription(
+          matchedSessionConnection?.sendOnlyPeerConnection?.setRemoteDescription(
             new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
           );
         }
@@ -220,19 +219,19 @@ export const MeetingProvider: React.FC = ({ children }) => {
       (connectionId: string, candidate: string) => {
         const objCandidate = JSON.parse(candidate);
         const isSelf = connectionId === serverConnection.current?.connectionId;
-        const matchedUserSession = userSessions.find(
+        const matchedSessionConnection = userSessionConnections.current.find(
           (x) => x.connectionId === connectionId
         );
-        if (matchedUserSession) {
+        if (matchedSessionConnection) {
           if (isSelf) {
-            if (matchedUserSession.sendOnlyPeerConnection) {
-              matchedUserSession.sendOnlyPeerConnection.addIceCandidate(
+            if (matchedSessionConnection.sendOnlyPeerConnection) {
+              matchedSessionConnection.sendOnlyPeerConnection.addIceCandidate(
                 objCandidate
               );
             }
           } else {
             const matchedConnection =
-              matchedUserSession.recvOnlyPeerConnections?.find(
+              matchedSessionConnection.recvOnlyPeerConnections?.find(
                 (x) => x.connectionId === connectionId
               );
             if (matchedConnection) {
@@ -242,6 +241,13 @@ export const MeetingProvider: React.FC = ({ children }) => {
         }
       }
     );
+
+    serverConnection.current?.onclose((error?: Error) => {
+      if (error?.message.includes('MeetingNotFoundException')) {
+        alert('Meeting not found.');
+        electron.remote.getCurrentWindow().close();
+      }
+    });
   };
 
   const createPeerConnection = async (
@@ -249,6 +255,12 @@ export const MeetingProvider: React.FC = ({ children }) => {
     isSelf: boolean
   ) => {
     const peer = new RTCPeerConnection();
+    const userSessionConnection = {
+      userSessionId: userSession.id,
+      connectionId: userSession.connectionId,
+      sendOnlyPeerConnection: peer,
+      recvOnlyPeerConnections: [] as IUserRTCPeerConnection[],
+    };
     peer.addEventListener('icecandidate', (candidate) => {
       serverConnection?.current?.invoke(
         'ProcessCandidateAsync',
@@ -259,6 +271,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
     peer.addEventListener(
       'track',
       (e) => {
+        console.log('track');
         if (e.track.kind === 'audio') {
           const stream = e.streams[0];
           userSession.audioStream = stream;
@@ -274,55 +287,41 @@ export const MeetingProvider: React.FC = ({ children }) => {
       false
     );
     if (isSelf) {
-      userSession.sendOnlyPeerConnection = peer;
-
       const stream = await navigator.mediaDevices.getUserMedia({
         video: false,
         audio: true,
       });
-
       stream.getTracks().forEach((track: MediaStreamTrack) => {
         if (track.kind === 'audio') track.enabled = true;
-        userSession.sendOnlyPeerConnection?.addTrack(track, stream);
+        userSessionConnection.sendOnlyPeerConnection?.addTrack(track, stream);
       });
-
-      const offer = await userSession.sendOnlyPeerConnection.createOffer({
-        offerToReceiveAudio: false,
-        offerToReceiveVideo: false,
-      });
-
-      await userSession.sendOnlyPeerConnection.setLocalDescription(offer);
-
-      await serverConnection?.current?.invoke(
-        'ProcessOfferAsync',
-        userSession.connectionId,
-        offer.sdp,
-        true,
-        userSession.isSharingCamera,
-        userSession.isSharingScreen
-      );
     } else {
-      const offer = await peer.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true,
+      userSessionConnection.recvOnlyPeerConnections.push({
+        connectionId: userSession.connectionId,
+        peerConnection: peer,
       });
-
-      await peer.setLocalDescription(offer);
-
-      userSession.recvOnlyPeerConnections = [
-        ...userSession.recvOnlyPeerConnections,
-        { connectionId: userSession.connectionId, peerConnection: peer },
-      ];
-
-      await serverConnection?.current?.invoke(
-        'ProcessOfferAsync',
-        userSession.connectionId,
-        offer.sdp,
-        false,
-        userSession.isSharingCamera,
-        userSession.isSharingScreen
-      );
     }
+    const offer =
+      await userSessionConnection.sendOnlyPeerConnection.createOffer({
+        offerToReceiveAudio: !isSelf,
+        offerToReceiveVideo: !isSelf,
+      });
+    await userSessionConnection.sendOnlyPeerConnection.setLocalDescription(
+      offer
+    );
+    userSessionConnections.current = [
+      ...userSessionConnections.current,
+      userSessionConnection,
+    ];
+    console.log('ProcessOfferAsync', userSessionConnections);
+    await serverConnection?.current?.invoke(
+      'ProcessOfferAsync',
+      userSession.connectionId,
+      offer.sdp,
+      isSelf,
+      userSession.isSharingCamera,
+      userSession.isSharingScreen
+    );
   };
 
   const removeUserSession = (connectionId: string) => {
