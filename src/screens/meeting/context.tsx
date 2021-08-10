@@ -14,6 +14,7 @@ import {
   IUserSession,
   IUserSessionConnection,
   IUserRTCPeerConnection,
+  IUserSessionAudio,
 } from '../../dtos/schedule-meeting-command';
 import api from '../../services/api';
 
@@ -30,12 +31,14 @@ interface IMeetingContext {
     | undefined;
   meetingNumber: string;
   userSessions: IUserSession[];
+  userSessionAudios: IUserSessionAudio[];
 }
 
 export const MeetingContext = React.createContext<IMeetingContext>({
   serverConnection: undefined,
   meetingNumber: '',
   userSessions: [],
+  userSessionAudios: [],
 });
 
 export const MeetingProvider: React.FC = ({ children }) => {
@@ -50,6 +53,9 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const [signalrConnected, setSignalrConnected] =
     React.useState<boolean>(false);
   const [userSessions, setUserSessions] = React.useState<IUserSession[]>([]);
+  const [userSessionAudios, setUserSessionAudios] = React.useState<
+    IUserSessionAudio[]
+  >([]);
   const [meetingNumber, setMeetingNumber] = React.useState<string>('');
   const [meetingParam, setMeetingParam] =
     React.useState<IMeetingQueryStringParams>();
@@ -112,10 +118,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
   }, [localUserAdded, otherUsersAdded]);
 
   React.useEffect(() => {
-    console.log('effer', userSessions);
-  }, [userSessions]);
-
-  React.useEffect(() => {
     if (initialized) {
       console.log('user', userSessions);
       for (let i = 0; i < userSessions.length; i++) {
@@ -123,6 +125,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
       }
     }
   }, [initialized]);
+
+  React.useEffect(() => {
+    console.log('current audios', userSessionAudios);
+  }, [userSessionAudios]);
 
   const connectSignalr = (userName: string, meetingId: string) => {
     const wsUrl = `${Env.apiUrl}meetingHub?username=${userName}&meetingNumber=${meetingId}`;
@@ -169,12 +175,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
     serverConnection?.current?.on('OtherJoined', (otherUser: IUserSession) => {
       otherUser.isSelf = false;
-      console.log('other joined', userSessions);
       setUserSessions((oldUserSessions: IUserSession[]) => [
         ...oldUserSessions,
         otherUser,
       ]);
-      console.log('other joined', userSessions);
       createPeerConnection(otherUser, otherUser.isSelf);
     });
 
@@ -191,7 +195,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
         isSharingScreen: boolean
       ) => {
         console.log('---process answser----');
-        console.log('ProcessAnswer', userSessionConnections);
         const isSelf = connectionId === serverConnection.current?.connectionId;
         const matchedSessionConnection = userSessionConnections.current.find(
           (x) => x.connectionId === connectionId
@@ -256,6 +259,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
   ) => {
     const peer = new RTCPeerConnection();
     const userSessionConnection = {
+      audioStream: null,
       userSessionId: userSession.id,
       connectionId: userSession.connectionId,
       sendOnlyPeerConnection: peer,
@@ -271,17 +275,16 @@ export const MeetingProvider: React.FC = ({ children }) => {
     peer.addEventListener(
       'track',
       (e) => {
-        console.log('track');
         if (e.track.kind === 'audio') {
           const stream = e.streams[0];
-          userSession.audioStream = stream;
-          setUserSessions(
-            userSessions.map((session) =>
-              session.connectionId === userSession.connectionId
-                ? { ...userSession }
-                : session
-            )
-          );
+          setUserSessionAudios((oldUserSessionAudios: IUserSessionAudio[]) => [
+            ...oldUserSessionAudios,
+            {
+              userSessionId: userSession.id,
+              connectionId: userSession.connectionId,
+              audioStream: stream,
+            },
+          ]);
         }
       },
       false
@@ -313,7 +316,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
       ...userSessionConnections.current,
       userSessionConnection,
     ];
-    console.log('ProcessOfferAsync', userSessionConnections);
     await serverConnection?.current?.invoke(
       'ProcessOfferAsync',
       userSession.connectionId,
@@ -331,6 +333,17 @@ export const MeetingProvider: React.FC = ({ children }) => {
         (userSession: IUserSession) => userSession.connectionId !== connectionId
       )
     );
+    setUserSessionAudios((oldUserSessionAudios: IUserSessionAudio[]) =>
+      oldUserSessionAudios.filter(
+        (userSessionAudio: IUserSessionAudio) =>
+          userSessionAudio.connectionId !== connectionId
+      )
+    );
+    userSessionConnections.current = userSessionConnections.current.filter(
+      (userSessionConnection) =>
+        userSessionConnection.connectionId !== connectionId
+    );
+    console.log(userSessionConnections);
   };
 
   return (
@@ -339,6 +352,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
         serverConnection,
         meetingNumber,
         userSessions,
+        userSessionAudios,
       }}
     >
       {children && children}

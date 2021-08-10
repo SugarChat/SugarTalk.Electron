@@ -38,8 +38,12 @@ export interface IUserSession {
   userPicture: string;
   isSharingScreen: boolean;
   isSharingCamera: boolean;
+}
+
+export interface IUserSessionAudio {
+  userSessionId: string;
+  connectionId: string;
   audioStream: MediaStream | null;
-  sdp: string;
 }
 
 export interface IUserSessionConnection {

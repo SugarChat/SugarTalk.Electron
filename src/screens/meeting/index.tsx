@@ -20,7 +20,7 @@ interface IUser {
 }
 
 const MeetingScreen: React.FC = React.memo(() => {
-  const { serverConnection, meetingNumber, userSessions } =
+  const { serverConnection, meetingNumber, userSessions, userSessionAudios } =
     React.useContext(MeetingContext);
 
   const toggleVideo = () => {};
@@ -49,10 +49,17 @@ const MeetingScreen: React.FC = React.memo(() => {
                   userSession.connectionId
                 }
               />
-              {userSession.audioStream && !userSession.isSelf && (
+            </Box>
+          );
+        })}
+        {userSessionAudios?.map((userSessionAudio, key) => {
+          console.log('audio', userSessionAudio);
+          return (
+            <Box key={key.toString()}>
+              {userSessionAudio.audioStream && (
                 <audio
                   ref={(audio) => {
-                    if (audio) audio.srcObject = userSession.audioStream;
+                    if (audio) audio.srcObject = userSessionAudio.audioStream;
                   }}
                   autoPlay
                 />
