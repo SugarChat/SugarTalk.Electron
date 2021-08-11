@@ -277,14 +277,19 @@ export const MeetingProvider: React.FC = ({ children }) => {
       (e) => {
         if (e.track.kind === 'audio') {
           const stream = e.streams[0];
-          setUserSessionAudios((oldUserSessionAudios: IUserSessionAudio[]) => [
-            ...oldUserSessionAudios,
-            {
-              userSessionId: userSession.id,
-              connectionId: userSession.connectionId,
-              audioStream: stream,
-            },
-          ]);
+          e.track.onunmute = () => {
+            console.log('unmute');
+            setUserSessionAudios(
+              (oldUserSessionAudios: IUserSessionAudio[]) => [
+                ...oldUserSessionAudios,
+                {
+                  userSessionId: userSession.id,
+                  connectionId: userSession.connectionId,
+                  audioStream: stream,
+                },
+              ]
+            );
+          };
         }
       },
       false
