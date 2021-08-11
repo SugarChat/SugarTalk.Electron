@@ -13,7 +13,6 @@ import {
   JoinMeetingCommand,
   IUserSession,
   IUserSessionConnection,
-  IUserRTCPeerConnection,
   IUserSessionAudio,
 } from '../../dtos/schedule-meeting-command';
 import api from '../../services/api';
@@ -26,6 +25,8 @@ export interface IMeetingQueryStringParams {
 }
 
 interface IMeetingContext {
+  isMuted: boolean;
+  setIsMuted: React.Dispatch<React.SetStateAction<boolean>>;
   serverConnection:
     | React.MutableRefObject<HubConnection | undefined>
     | undefined;
@@ -35,6 +36,8 @@ interface IMeetingContext {
 }
 
 export const MeetingContext = React.createContext<IMeetingContext>({
+  isMuted: false,
+  setIsMuted: () => {},
   serverConnection: undefined,
   meetingNumber: '',
   userSessions: [],
@@ -42,7 +45,7 @@ export const MeetingContext = React.createContext<IMeetingContext>({
 });
 
 export const MeetingProvider: React.FC = ({ children }) => {
-  const [audio, setAudio] = React.useState<boolean>(false);
+  const [isMuted, setIsMuted] = React.useState<boolean>(false);
   const [video, setVideo] = React.useState<boolean>(false);
   const [screen, setScreen] = React.useState<boolean>(false);
   const [screenSelecting, setScreenSelecting] = React.useState<boolean>(false);
@@ -59,10 +62,14 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const [meetingNumber, setMeetingNumber] = React.useState<string>('');
   const [meetingParam, setMeetingParam] =
     React.useState<IMeetingQueryStringParams>();
+  const mediaStream = React.useRef<MediaStream>();
+  const [mediaStreamInitialized, setMediaStreamInitialized] =
+    React.useState<boolean>(false);
   const serverConnection = React.useRef<HubConnection>();
+  const userSessionConnections = React.useRef<IUserSessionConnection[]>([]);
+
   const location = useLocation();
   const { userStore } = useStores();
-  const userSessionConnections = React.useRef<IUserSessionConnection[]>([]);
 
   React.useEffect(() => {
     const params = queryString.parse(location.search, {
@@ -81,14 +88,23 @@ export const MeetingProvider: React.FC = ({ children }) => {
           electron.remote.getCurrentWindow().close();
         }
       };
+      const initMediaStream = async () => {
+        mediaStream.current = await navigator.mediaDevices.getUserMedia({
+          video: false,
+          audio: true,
+        });
+        setMediaStreamInitialized(true);
+      };
 
       initMediaDeviceStatus();
+      initMediaStream();
 
-      setAudio(meetingParam.connectedWithAudio);
+      setIsMuted(!meetingParam.connectedWithAudio);
 
       const joinTheMeeting = async () => {
         const joinMeetingCommand: JoinMeetingCommand = {
           meetingNumber: meetingParam.meetingId,
+          isMuted: !meetingParam.connectedWithAudio,
         };
         await api.meeting.joinMeeting(joinMeetingCommand).then(() => {
           setMeetingJoined(true);
@@ -119,7 +135,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
   React.useEffect(() => {
     if (initialized) {
-      console.log('user', userSessions);
       for (let i = 0; i < userSessions.length; i++) {
         createPeerConnection(userSessions[i], userSessions[i].isSelf);
       }
@@ -127,8 +142,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
   }, [initialized]);
 
   React.useEffect(() => {
-    console.log('current audios', userSessionAudios);
-  }, [userSessionAudios]);
+    if (mediaStreamInitialized && mediaStream.current) {
+      mediaStream.current.getAudioTracks()[0].enabled = !isMuted;
+    }
+  }, [isMuted, mediaStreamInitialized]);
 
   const connectSignalr = (userName: string, meetingId: string) => {
     const wsUrl = `${Env.apiUrl}meetingHub?username=${userName}&meetingNumber=${meetingId}`;
@@ -179,7 +196,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
         ...oldUserSessions,
         otherUser,
       ]);
-
       createPeerConnection(otherUser, otherUser.isSelf);
     });
 
@@ -200,13 +216,11 @@ export const MeetingProvider: React.FC = ({ children }) => {
         const matchedSessionConnection = userSessionConnections.current.find(
           (x) => x.connectionId === connectionId
         );
-        console.log('process-answer-isSelf', isSelf);
         if (matchedSessionConnection) {
           const matchedPeerConnection =
             matchedSessionConnection.peerConnections.find(
               (x) => x.connectionId === connectionId && x.isSelf === isSelf
             );
-          console.log('process-answer-connection', matchedPeerConnection);
           matchedPeerConnection?.peerConnection.setRemoteDescription(
             new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
           );
@@ -274,19 +288,9 @@ export const MeetingProvider: React.FC = ({ children }) => {
       }
     });
     if (isSelf) {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: false,
-        audio: true,
+      mediaStream.current?.getTracks().forEach((track: MediaStreamTrack) => {
+        if (mediaStream.current) peer.addTrack(track, mediaStream.current);
       });
-      stream.getTracks().forEach((track: MediaStreamTrack) => {
-        if (track.kind === 'audio') track.enabled = true;
-        peer.addTrack(track, stream);
-      });
-    } else {
-      // userSessionConnection.peerConnection.push({
-      //   connectionId: userSession.connectionId,
-      //   peerConnection: peer,
-      // });
     }
     const offer = await peer.createOffer({
       offerToReceiveAudio: !isSelf,
@@ -302,7 +306,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
       ...userSessionConnections.current,
       userSessionConnection,
     ];
-    console.log('process-offer-isSelf', isSelf);
     await serverConnection?.current?.invoke(
       'ProcessOfferAsync',
       userSession.connectionId,
@@ -330,12 +333,13 @@ export const MeetingProvider: React.FC = ({ children }) => {
       (userSessionConnection) =>
         userSessionConnection.connectionId !== connectionId
     );
-    console.log(userSessionConnections);
   };
 
   return (
     <MeetingContext.Provider
       value={{
+        isMuted,
+        setIsMuted,
         serverConnection,
         meetingNumber,
         userSessions,
