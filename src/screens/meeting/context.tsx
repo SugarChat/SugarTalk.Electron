@@ -179,7 +179,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
         ...oldUserSessions,
         otherUser,
       ]);
-      createPeerConnection(otherUser, otherUser.isSelf);
+      setTimeout(() => {
+        console.log('other join create connectnion');
+        createPeerConnection(otherUser, otherUser.isSelf);
+      }, 3000);
     });
 
     serverConnection?.current?.on('OtherLeft', (connectionId: string) => {
@@ -194,16 +197,17 @@ export const MeetingProvider: React.FC = ({ children }) => {
         isSharingCamera: boolean,
         isSharingScreen: boolean
       ) => {
-        console.log('---process answser----');
         const isSelf = connectionId === serverConnection.current?.connectionId;
         const matchedSessionConnection = userSessionConnections.current.find(
           (x) => x.connectionId === connectionId
         );
+        console.log('process-answer-isSelf', isSelf);
         if (matchedSessionConnection) {
           const matchedPeerConnection =
             matchedSessionConnection.peerConnections.find(
               (x) => x.connectionId === connectionId && x.isSelf === isSelf
             );
+          console.log('process-answer-connection', matchedPeerConnection);
           matchedPeerConnection?.peerConnection.setRemoteDescription(
             new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
           );
@@ -215,7 +219,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
       'AddCandidate',
       (connectionId: string, candidate: string) => {
         const objCandidate = JSON.parse(candidate);
-
         const isSelf = connectionId === serverConnection.current?.connectionId;
         const matchedSessionConnection = userSessionConnections.current.find(
           (x) => x.connectionId === connectionId
@@ -255,28 +258,19 @@ export const MeetingProvider: React.FC = ({ children }) => {
         candidate
       );
     });
-    peer.addEventListener(
-      'track',
-      (e) => {
-        if (e.track.kind === 'audio') {
-          const stream = e.streams[0];
-          e.track.onunmute = () => {
-            console.log('unmute');
-            setUserSessionAudios(
-              (oldUserSessionAudios: IUserSessionAudio[]) => [
-                ...oldUserSessionAudios,
-                {
-                  userSessionId: userSession.id,
-                  connectionId: userSession.connectionId,
-                  audioStream: stream,
-                },
-              ]
-            );
-          };
-        }
-      },
-      false
-    );
+    peer.addEventListener('track', (e: RTCTrackEvent) => {
+      if (e.track.kind === 'audio') {
+        const stream = e.streams[0];
+        setUserSessionAudios((oldUserSessionAudios: IUserSessionAudio[]) => [
+          ...oldUserSessionAudios,
+          {
+            userSessionId: userSession.id,
+            connectionId: userSession.connectionId,
+            audioStream: stream,
+          },
+        ]);
+      }
+    });
     if (isSelf) {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: false,
@@ -306,6 +300,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
       ...userSessionConnections.current,
       userSessionConnection,
     ];
+    console.log('process-offer-isSelf', isSelf);
     await serverConnection?.current?.invoke(
       'ProcessOfferAsync',
       userSession.connectionId,
