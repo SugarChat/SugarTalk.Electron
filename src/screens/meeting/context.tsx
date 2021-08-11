@@ -198,6 +198,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
         isSharingScreen: boolean
       ) => {
         const isSelf = connectionId === serverConnection.current?.connectionId;
+
         const matchedSessionConnection = userSessionConnections.current.find(
           (x) => x.connectionId === connectionId
         );
@@ -211,6 +212,9 @@ export const MeetingProvider: React.FC = ({ children }) => {
           matchedPeerConnection?.peerConnection.setRemoteDescription(
             new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
           );
+        }
+        if (isSelf) {
+          serverConnection?.current?.invoke('OnNewUserFinishedSetup');
         }
       }
     );
