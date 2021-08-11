@@ -199,18 +199,12 @@ export const MeetingProvider: React.FC = ({ children }) => {
         const matchedSessionConnection = userSessionConnections.current.find(
           (x) => x.connectionId === connectionId
         );
-        if (!isSelf) {
-          if (matchedSessionConnection) {
-            const matchedPeerConnection =
-              matchedSessionConnection.recvOnlyPeerConnections.find(
-                (x) => x.connectionId === connectionId
-              );
-            matchedPeerConnection?.peerConnection.setRemoteDescription(
-              new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
+        if (matchedSessionConnection) {
+          const matchedPeerConnection =
+            matchedSessionConnection.peerConnections.find(
+              (x) => x.connectionId === connectionId && x.isSelf === isSelf
             );
-          }
-        } else {
-          matchedSessionConnection?.sendOnlyPeerConnection?.setRemoteDescription(
+          matchedPeerConnection?.peerConnection.setRemoteDescription(
             new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
           );
         }
@@ -221,26 +215,17 @@ export const MeetingProvider: React.FC = ({ children }) => {
       'AddCandidate',
       (connectionId: string, candidate: string) => {
         const objCandidate = JSON.parse(candidate);
+
         const isSelf = connectionId === serverConnection.current?.connectionId;
         const matchedSessionConnection = userSessionConnections.current.find(
           (x) => x.connectionId === connectionId
         );
         if (matchedSessionConnection) {
-          if (isSelf) {
-            if (matchedSessionConnection.sendOnlyPeerConnection) {
-              matchedSessionConnection.sendOnlyPeerConnection.addIceCandidate(
-                objCandidate
-              );
-            }
-          } else {
-            const matchedConnection =
-              matchedSessionConnection.recvOnlyPeerConnections?.find(
-                (x) => x.connectionId === connectionId
-              );
-            if (matchedConnection) {
-              matchedConnection.peerConnection.addIceCandidate(objCandidate);
-            }
-          }
+          const matchedPeerConnection =
+            matchedSessionConnection.peerConnections.find(
+              (x) => x.connectionId === connectionId && x.isSelf === isSelf
+            );
+          matchedPeerConnection?.peerConnection.addIceCandidate(objCandidate);
         }
       }
     );
@@ -258,12 +243,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
     isSelf: boolean
   ) => {
     const peer = new RTCPeerConnection();
-    const userSessionConnection = {
-      audioStream: null,
+    const userSessionConnection: IUserSessionConnection = {
       userSessionId: userSession.id,
       connectionId: userSession.connectionId,
-      sendOnlyPeerConnection: peer,
-      recvOnlyPeerConnections: [] as IUserRTCPeerConnection[],
+      peerConnections: [],
     };
     peer.addEventListener('icecandidate', (candidate) => {
       serverConnection?.current?.invoke(
@@ -301,22 +284,24 @@ export const MeetingProvider: React.FC = ({ children }) => {
       });
       stream.getTracks().forEach((track: MediaStreamTrack) => {
         if (track.kind === 'audio') track.enabled = true;
-        userSessionConnection.sendOnlyPeerConnection?.addTrack(track, stream);
+        peer.addTrack(track, stream);
       });
     } else {
-      userSessionConnection.recvOnlyPeerConnections.push({
-        connectionId: userSession.connectionId,
-        peerConnection: peer,
-      });
+      // userSessionConnection.peerConnection.push({
+      //   connectionId: userSession.connectionId,
+      //   peerConnection: peer,
+      // });
     }
-    const offer =
-      await userSessionConnection.sendOnlyPeerConnection.createOffer({
-        offerToReceiveAudio: !isSelf,
-        offerToReceiveVideo: !isSelf,
-      });
-    await userSessionConnection.sendOnlyPeerConnection.setLocalDescription(
-      offer
-    );
+    const offer = await peer.createOffer({
+      offerToReceiveAudio: !isSelf,
+      offerToReceiveVideo: !isSelf,
+    });
+    await peer.setLocalDescription(offer);
+    userSessionConnection.peerConnections.push({
+      isSelf,
+      connectionId: userSession.connectionId,
+      peerConnection: peer,
+    });
     userSessionConnections.current = [
       ...userSessionConnections.current,
       userSessionConnection,

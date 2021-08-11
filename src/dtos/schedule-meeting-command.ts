@@ -43,17 +43,17 @@ export interface IUserSession {
 export interface IUserSessionAudio {
   userSessionId: string;
   connectionId: string;
-  audioStream: MediaStream | null;
+  audioStream: MediaStream;
 }
 
 export interface IUserSessionConnection {
   userSessionId: string;
   connectionId: string;
-  sendOnlyPeerConnection: RTCPeerConnection | undefined;
-  recvOnlyPeerConnections: IUserRTCPeerConnection[];
+  peerConnections: IUserRTCPeerConnection[];
 }
 
 export interface IUserRTCPeerConnection {
+  isSelf: boolean;
   connectionId: string;
   peerConnection: RTCPeerConnection;
 }
