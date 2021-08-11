@@ -9,6 +9,8 @@ import { MeetingContext, MeetingProvider } from './context';
 import { VerticalUserList } from './components/vertical-user-list';
 import Api from '../../services/api';
 import { IUserSession } from '../../dtos/schedule-meeting-command';
+import { UserCard } from './components/user-card';
+import { GUID } from '../../utils/guid';
 
 interface IUser {
   id: string;
@@ -18,186 +20,54 @@ interface IUser {
 }
 
 const MeetingScreen: React.FC = React.memo(() => {
-  const [userSessions, setUserSessions] = React.useState<IUserSession[]>([]);
+  const { serverConnection, meetingNumber, userSessions, userSessionAudios } =
+    React.useContext(MeetingContext);
 
-  const userSessionsRef = React.useRef<Record<string, IWebRTCRef>>({});
-
-  const { serverConnection, meetingNumber } = React.useContext(MeetingContext);
-
-  const selfUserSession = React.useMemo(() => {
-    return userSessions.find((userSession) => userSession.isSelf === true);
-  }, [userSessions]);
-
-  const createUserSession = (user: IUser, isSelf: boolean) => {
-    const userSession: IUserSession = {
-      id: user.id,
-      connectionId: user.connectionId,
-      userName: user.userName,
-      isSelf,
-      userPicture: user.userPicture,
-      isSharingCamera: false,
-      isSharingScreen: false,
-    };
-
-    setUserSessions((oldUserSessions: IUserSession[]) => [
-      ...oldUserSessions,
-      userSession,
-    ]);
-  };
-
-  const removeUserSession = (connectionId: string) => {
-    setUserSessions((oldUserSessions: IUserSession[]) =>
-      oldUserSessions.filter(
-        (userSession: IUserSession) => userSession.connectionId !== connectionId
-      )
-    );
-  };
-
-  React.useEffect(() => {
-    serverConnection?.current?.on('SetLocalUser', (localUser: IUser) => {
-      createUserSession(localUser, true);
-    });
-
-    serverConnection?.current?.on('SetOtherUsers', (otherUsers: IUser[]) => {
-      otherUsers.forEach((user: IUser) => {
-        createUserSession(user, false);
-      });
-    });
-
-    serverConnection?.current?.on('OtherJoined', (otherUser: IUser) => {
-      createUserSession(otherUser, false);
-    });
-
-    serverConnection?.current?.on('OtherLeft', (connectionId: string) => {
-      removeUserSession(connectionId);
-    });
-
-    serverConnection?.current?.on(
-      'ProcessAnswer',
-      async (
-        connectionId: string,
-        answerSDP: string,
-        isSharingCamera: boolean,
-        isSharingScreen: boolean
-      ) => {
-        if (userSessionsRef.current[connectionId]) {
-          userSessionsRef.current[connectionId].onProcessAnswer(
-            connectionId,
-            answerSDP,
-            isSharingCamera,
-            isSharingScreen
-          );
-        }
-
-        console.log('----process answer----');
-      }
-    );
-
-    serverConnection?.current?.on(
-      'NewOfferCreated',
-      async (
-        connectionId: string,
-        answerSDP: string,
-        isSharingCamera: boolean,
-        isSharingScreen: boolean
-      ) => {
-        console.log('----new offer----');
-
-        const meetingSessionDto = await Api.meeting.getMeetingSession({
-          meetingNumber,
-        });
-
-        const newUserSessions = Object.entries(
-          meetingSessionDto.data.userSessions
-        ).map((key, v) => {
-          return key[1];
-        });
-
-        console.log(newUserSessions);
-        console.log(userSessions);
-        setUserSessions(newUserSessions);
-
-        if (userSessionsRef.current[connectionId]) {
-          userSessionsRef.current[connectionId].onNewOfferCreated(
-            connectionId,
-            answerSDP,
-            isSharingCamera,
-            isSharingScreen
-          );
-        }
-      }
-    );
-
-    serverConnection?.current?.on(
-      'AddCandidate',
-      (connectionId: string, candidate: string) => {
-        if (userSessionsRef.current[connectionId]) {
-          userSessionsRef.current[connectionId].onAddCandidate(
-            connectionId,
-            candidate
-          );
-        }
-      }
-    );
-  }, [serverConnection?.current]);
-
-  const toggleVideo = () => {
-    if (selfUserSession) {
-      userSessionsRef.current[selfUserSession.connectionId].toggleVideo();
-    }
-  };
+  const toggleVideo = () => {};
 
   const toggleScreen = (screenId?: string) => {
-    if (selfUserSession) {
-      userSessionsRef.current[selfUserSession.connectionId].toggleScreen(
-        screenId
-      );
-    }
+    // if (selfUserSession) {
+    //   userSessionsRef.current[selfUserSession.connectionId].toggleScreen(
+    //     screenId
+    //   );
+    // }
   };
-
-  const userThatShowingVideo = userSessions.find(
-    (x) => x.isSharingCamera || x.isSharingScreen
-  );
 
   return (
     <PageScreen style={styles.root}>
       <StatusBar />
 
-      {!userThatShowingVideo && (
-        <Box style={styles.webRTCContainer}>
-          {userSessions.map((userSession, key) => {
-            return (
-              <WebRTC
-                ref={(ref: IWebRTCRef) => {
-                  userSessionsRef.current[userSession.connectionId] = ref;
-                }}
+      <Box style={styles.webRTCContainer}>
+        {userSessions.map((userSession, key) => {
+          return (
+            <Box key={GUID()}>
+              <UserCard
                 key={key.toString()}
                 userSession={userSession}
-                isSelf={userSession.isSelf}
+                isSelf={
+                  serverConnection?.current?.connectionId ===
+                  userSession.connectionId
+                }
               />
-            );
-          })}
-        </Box>
-      )}
-
-      {userThatShowingVideo && (
-        <Box style={styles.sharingRootContainer}>
-          <Box style={styles.sharingContainer}>
-            <WebRTC
-              ref={(ref: IWebRTCRef) => {
-                userSessionsRef.current[userThatShowingVideo.connectionId] =
-                  ref;
-              }}
-              userSession={userThatShowingVideo}
-              isSelf={userThatShowingVideo.isSelf}
-            />
-          </Box>
-          <Box style={styles.verticalUserList}>
-            <VerticalUserList userSessions={userSessions}></VerticalUserList>
-          </Box>
-        </Box>
-      )}
-
+            </Box>
+          );
+        })}
+        {userSessionAudios?.map((userSessionAudio, key) => {
+          console.log('audio', userSessionAudio);
+          return (
+            <Box key={key.toString()}>
+              {userSessionAudio.audioStream && (
+                <audio
+                  ref={(audio) => {
+                    if (audio) audio.srcObject = userSessionAudio.audioStream;
+                  }}
+                  autoPlay
+                />
+              )}
+            </Box>
+          );
+        })}
+      </Box>
       <FooterToolbar toggleVideo={toggleVideo} toggleScreen={toggleScreen} />
     </PageScreen>
   );

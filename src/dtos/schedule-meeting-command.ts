@@ -10,6 +10,10 @@ export interface ScheduleMeetingCommand {
   meetingType: MeetingType;
 }
 
+export interface JoinMeetingCommand {
+  meetingNumber: string;
+}
+
 export interface MeetingDto {
   meetingNumber: string;
 }
@@ -23,6 +27,7 @@ export interface MeetingSession {
   meetingNumber: string;
   meetingType: MeetingType;
   userSessions: Record<string, IUserSession>;
+  allUserSessions: IUserSession[];
 }
 
 export interface IUserSession {
@@ -33,4 +38,22 @@ export interface IUserSession {
   userPicture: string;
   isSharingScreen: boolean;
   isSharingCamera: boolean;
+}
+
+export interface IUserSessionAudio {
+  userSessionId: string;
+  connectionId: string;
+  audioStream: MediaStream;
+}
+
+export interface IUserSessionConnection {
+  userSessionId: string;
+  connectionId: string;
+  peerConnections: IUserRTCPeerConnection[];
+}
+
+export interface IUserRTCPeerConnection {
+  isSelf: boolean;
+  connectionId: string;
+  peerConnection: RTCPeerConnection;
 }
