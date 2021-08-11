@@ -179,10 +179,8 @@ export const MeetingProvider: React.FC = ({ children }) => {
         ...oldUserSessions,
         otherUser,
       ]);
-      setTimeout(() => {
-        console.log('other join create connectnion');
-        createPeerConnection(otherUser, otherUser.isSelf);
-      }, 3000);
+
+      createPeerConnection(otherUser, otherUser.isSelf);
     });
 
     serverConnection?.current?.on('OtherLeft', (connectionId: string) => {
