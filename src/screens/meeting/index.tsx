@@ -4,70 +4,55 @@ import { PageScreen } from '../../components/page-screen/index';
 import { StatusBar } from './components/status-bar';
 import * as styles from './styles';
 import { FooterToolbar } from './components/footer-toolbar';
-import { IWebRTCRef, WebRTC } from './components/web-rtc';
 import { MeetingContext, MeetingProvider } from './context';
 import { VerticalUserList } from './components/vertical-user-list';
-import Api from '../../services/api';
-import { IUserSession } from '../../dtos/schedule-meeting-command';
-import { UserCard } from './components/user-card';
-import { GUID } from '../../utils/guid';
-
-interface IUser {
-  id: string;
-  connectionId: string;
-  userName: string;
-  userPicture: string;
-}
 
 const MeetingScreen: React.FC = React.memo(() => {
-  const { serverConnection, meetingNumber, userSessions, userSessionAudios } =
-    React.useContext(MeetingContext);
+  const { userSessions, userSessionAudios } = React.useContext(MeetingContext);
+
+  const isSomeoneSharingScreenOrCamera = userSessions.some(
+    (x) => x.isSharingScreen || x.isSharingCamera
+  );
 
   const toggleVideo = () => {};
 
-  const toggleScreen = (screenId?: string) => {
-    // if (selfUserSession) {
-    //   userSessionsRef.current[selfUserSession.connectionId].toggleScreen(
-    //     screenId
-    //   );
-    // }
-  };
+  const toggleScreen = (screenId?: string) => {};
 
   return (
     <PageScreen style={styles.root}>
       <StatusBar />
 
       <Box style={styles.webRTCContainer}>
-        {userSessions.map((userSession, key) => {
-          return (
-            <Box key={GUID()}>
-              <UserCard
-                key={key.toString()}
-                userSession={userSession}
-                isSelf={
-                  serverConnection?.current?.connectionId ===
-                  userSession.connectionId
-                }
-              />
+        {isSomeoneSharingScreenOrCamera && (
+          <Box style={styles.sharingRootContainer}>
+            <Box style={styles.sharingContainer}>
+              <video></video>
             </Box>
-          );
-        })}
-        {userSessionAudios?.map((userSessionAudio, key) => {
-          console.log('audio', userSessionAudio);
-          return (
-            <Box key={key.toString()}>
-              {userSessionAudio.audioStream && (
-                <audio
-                  ref={(audio) => {
-                    if (audio) audio.srcObject = userSessionAudio.audioStream;
-                  }}
-                  autoPlay
-                />
-              )}
+            <Box style={styles.verticalUserListContainer}>
+              <VerticalUserList />
             </Box>
-          );
-        })}
+          </Box>
+        )}
+        {!isSomeoneSharingScreenOrCamera && (
+          <Box style={styles.sharingRootContainer}>
+            <VerticalUserList />
+          </Box>
+        )}
       </Box>
+      {userSessionAudios?.map((userSessionAudio, key) => {
+        return (
+          <Box key={key.toString()}>
+            {userSessionAudio.audioStream && (
+              <audio
+                ref={(audio) => {
+                  if (audio) audio.srcObject = userSessionAudio.audioStream;
+                }}
+                autoPlay
+              />
+            )}
+          </Box>
+        );
+      })}
       <FooterToolbar toggleVideo={toggleVideo} toggleScreen={toggleScreen} />
     </PageScreen>
   );

@@ -26,10 +26,9 @@ export const sharingContainer: CSSProperties = {
   flex: 9,
 };
 
-export const verticalUserList: CSSProperties = {
+export const verticalUserListContainer: CSSProperties = {
   padding: '5px',
   display: 'flex',
   textAlign: 'center',
   flex: 1,
-  backgroundColor: 'blue',
 };
