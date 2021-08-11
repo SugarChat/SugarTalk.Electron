@@ -1,8 +1,12 @@
 import { CSSProperties } from 'react';
 export const root: CSSProperties = {
   padding: 0,
-  backgroundColor: '#fafafa',
   height: '100%',
+  width: '100%',
+};
+
+export const listItem: CSSProperties = {
+  justifyContent: 'center',
 };
 
 export const userContainer: CSSProperties = {

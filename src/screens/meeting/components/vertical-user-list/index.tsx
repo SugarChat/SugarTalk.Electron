@@ -1,19 +1,16 @@
 import { Avatar, Box, List, ListItem } from '@material-ui/core';
 import React from 'react';
-import { IUserSession } from '../../../../dtos/schedule-meeting-command';
+import { MeetingContext } from '../../context';
 
 import * as styles from './styles';
 
-interface VerticalUserListProps {
-  userSessions: IUserSession[];
-}
-
-export const VerticalUserList = (props: VerticalUserListProps) => {
+export const VerticalUserList = () => {
+  const { userSessions } = React.useContext(MeetingContext);
   return (
-    <List component="nav">
-      {props.userSessions.map((userSession, key) => {
+    <List component="div" style={styles.root}>
+      {userSessions.map((userSession, key) => {
         return (
-          <ListItem key={key}>
+          <ListItem key={key} style={styles.listItem}>
             <Box component="div" style={styles.userContainer}>
               <Avatar src={userSession.userPicture} style={styles.avatar} />
               <Box component="div" style={styles.userName}>
