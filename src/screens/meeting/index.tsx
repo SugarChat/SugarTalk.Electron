@@ -8,11 +8,16 @@ import { MeetingContext, MeetingProvider } from './context';
 import { VerticalUserList } from './components/vertical-user-list';
 
 const MeetingScreen: React.FC = React.memo(() => {
-  const { userSessions, userSessionAudios } = React.useContext(MeetingContext);
+  const { isMuted, setIsMuted, userSessions, userSessionAudios } =
+    React.useContext(MeetingContext);
 
   const isSomeoneSharingScreenOrCamera = userSessions.some(
     (x) => x.isSharingScreen || x.isSharingCamera
   );
+
+  const toggleAudio = () => {
+    setIsMuted(!isMuted);
+  };
 
   const toggleVideo = () => {};
 
@@ -53,7 +58,11 @@ const MeetingScreen: React.FC = React.memo(() => {
           </Box>
         );
       })}
-      <FooterToolbar toggleVideo={toggleVideo} toggleScreen={toggleScreen} />
+      <FooterToolbar
+        toggleAudio={toggleAudio}
+        toggleVideo={toggleVideo}
+        toggleScreen={toggleScreen}
+      />
     </PageScreen>
   );
 });

@@ -36,14 +36,15 @@ const ToolbarButton = React.memo((props: IToolbarButton) => {
 });
 
 interface IFooterToolBar {
+  toggleAudio: () => void;
   toggleVideo: () => void;
   toggleScreen: (screenId?: string) => void;
 }
 
 export const FooterToolbar = React.memo((props: IFooterToolBar) => {
-  const { toggleVideo, toggleScreen } = props;
+  const { toggleAudio, toggleVideo, toggleScreen } = props;
 
-  const { audio, setAudio, video, screen, screenSelecting } =
+  const { isMuted, video, screen, screenSelecting } =
     React.useContext(MeetingContext);
 
   React.useEffect(() => {
@@ -101,7 +102,7 @@ export const FooterToolbar = React.memo((props: IFooterToolBar) => {
   };
 
   const onAudio = () => {
-    setAudio(!audio);
+    toggleAudio();
   };
 
   return (
@@ -111,8 +112,8 @@ export const FooterToolbar = React.memo((props: IFooterToolBar) => {
           <Grid item>
             <ToolbarButton
               onClick={onAudio}
-              text={audio ? '静音' : '解除静音'}
-              icon={audio ? <MicIcon /> : <MicOffIcon />}
+              text={!isMuted ? '静音' : '解除静音'}
+              icon={!isMuted ? <MicIcon /> : <MicOffIcon />}
             />
           </Grid>
           <Grid item>

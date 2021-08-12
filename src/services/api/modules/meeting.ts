@@ -4,6 +4,8 @@ import {
   MeetingSession,
   ScheduleMeetingCommand,
   JoinMeetingCommand,
+  ChangeAudioCommand,
+  IUserSession,
 } from '../../../dtos/schedule-meeting-command';
 import { SugarTalkResponse } from '../../../dtos/sugar-talk-response';
 import { api } from '../base-api';
@@ -25,6 +27,17 @@ export default {
   ): Promise<SugarTalkResponse<MeetingSession>> => {
     const response = await api.post<SugarTalkResponse<MeetingSession>>(
       '/meeting/join',
+      request
+    );
+
+    return response.data;
+  },
+
+  changeAudio: async (
+    request: ChangeAudioCommand
+  ): Promise<SugarTalkResponse<IUserSession>> => {
+    const response = await api.post<SugarTalkResponse<IUserSession>>(
+      '/userSession/changeAudio',
       request
     );
 

@@ -12,6 +12,12 @@ export interface ScheduleMeetingCommand {
 
 export interface JoinMeetingCommand {
   meetingNumber: string;
+  isMuted: boolean;
+}
+
+export interface ChangeAudioCommand {
+  UserSessionId: string;
+  isMuted: boolean;
 }
 
 export interface MeetingDto {
@@ -36,6 +42,7 @@ export interface IUserSession {
   userName: string;
   isSelf: boolean;
   userPicture: string;
+  isMuted: boolean;
   isSharingScreen: boolean;
   isSharingCamera: boolean;
 }
