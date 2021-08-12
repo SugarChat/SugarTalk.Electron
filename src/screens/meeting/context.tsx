@@ -14,6 +14,7 @@ import {
   IUserSession,
   IUserSessionConnection,
   IUserSessionAudio,
+  ChangeAudioCommand,
 } from '../../dtos/schedule-meeting-command';
 import api from '../../services/api';
 
@@ -144,8 +145,22 @@ export const MeetingProvider: React.FC = ({ children }) => {
   React.useEffect(() => {
     if (mediaStreamInitialized && mediaStream.current) {
       mediaStream.current.getAudioTracks()[0].enabled = !isMuted;
+      const selfUserSession = userSessions.find((x) => x.isSelf);
+      if (selfUserSession) {
+        selfUserSession.isMuted = isMuted;
+        setUserSessions([...userSessions]);
+        changeAudio(selfUserSession.id, isMuted);
+      }
     }
   }, [isMuted, mediaStreamInitialized]);
+
+  const changeAudio = (userSessionId: string, muted: boolean) => {
+    const changeAudioCcommand: ChangeAudioCommand = {
+      UserSessionId: userSessionId,
+      isMuted: muted,
+    };
+    api.meeting.changeAudio(changeAudioCcommand);
+  };
 
   const connectSignalr = (userName: string, meetingId: string) => {
     const wsUrl = `${Env.apiUrl}meetingHub?username=${userName}&meetingNumber=${meetingId}`;
@@ -198,6 +213,20 @@ export const MeetingProvider: React.FC = ({ children }) => {
       ]);
       createPeerConnection(otherUser, otherUser.isSelf);
     });
+
+    serverConnection.current?.on(
+      'OtherAudioChanged',
+      (otherUser: IUserSession) => {
+        setUserSessions((oldUserSessions: IUserSession[]) => {
+          const changedUserSession = oldUserSessions.find(
+            (x) => x.connectionId === otherUser.connectionId
+          );
+          if (changedUserSession)
+            changedUserSession.isMuted = otherUser.isMuted;
+          return [...oldUserSessions];
+        });
+      }
+    );
 
     serverConnection?.current?.on('OtherLeft', (connectionId: string) => {
       removeUserSession(connectionId);

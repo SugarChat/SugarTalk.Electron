@@ -15,6 +15,11 @@ export interface JoinMeetingCommand {
   isMuted: boolean;
 }
 
+export interface ChangeAudioCommand {
+  UserSessionId: string;
+  isMuted: boolean;
+}
+
 export interface MeetingDto {
   meetingNumber: string;
 }

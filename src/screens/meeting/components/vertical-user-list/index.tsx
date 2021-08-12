@@ -15,6 +15,7 @@ export const VerticalUserList = () => {
               <Avatar src={userSession.userPicture} style={styles.avatar} />
               <Box component="div" style={styles.userName}>
                 {userSession.userName}
+                {userSession.isMuted ? 'muted' : 'unmute'}
               </Box>
             </Box>
           </ListItem>
