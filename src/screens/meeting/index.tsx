@@ -8,37 +8,50 @@ import { MeetingContext, MeetingProvider } from './context';
 import { VerticalUserList } from './components/vertical-user-list';
 
 const MeetingScreen: React.FC = React.memo(() => {
-  const { isMuted, setIsMuted, userSessions, userSessionAudios } =
-    React.useContext(MeetingContext);
+  const {
+    userSessions,
+    userSessionAudios,
+    userSessionVideos,
+    currentScreenId,
+    isMuted,
+  } = React.useContext(MeetingContext);
 
-  const isSomeoneSharingScreenOrCamera = userSessions.some(
+  const isSomeoneElseSharingScreenOrCamera = userSessions.some(
     (x) => x.isSharingScreen || x.isSharingCamera
   );
 
-  const toggleAudio = () => {
-    setIsMuted(!isMuted);
-  };
-
-  const toggleVideo = () => {};
-
-  const toggleScreen = (screenId?: string) => {};
+  console.log(userSessionVideos);
 
   return (
     <PageScreen style={styles.root}>
       <StatusBar />
 
       <Box style={styles.webRTCContainer}>
-        {isSomeoneSharingScreenOrCamera && (
+        {isSomeoneElseSharingScreenOrCamera && (
           <Box style={styles.sharingRootContainer}>
             <Box style={styles.sharingContainer}>
-              <video></video>
+              {userSessionVideos?.map((userSessionVideo, key) => {
+                console.log(userSessionVideo);
+                return (
+                  <Box key={key.toString()}>
+                    {userSessionVideo.stream && (
+                      <video
+                        ref={(video) => {
+                          if (video) video.srcObject = userSessionVideo.stream;
+                        }}
+                        autoPlay
+                      />
+                    )}
+                  </Box>
+                );
+              })}
             </Box>
             <Box style={styles.verticalUserListContainer}>
               <VerticalUserList />
             </Box>
           </Box>
         )}
-        {!isSomeoneSharingScreenOrCamera && (
+        {!isSomeoneElseSharingScreenOrCamera && (
           <Box style={styles.sharingRootContainer}>
             <VerticalUserList />
           </Box>
@@ -47,10 +60,10 @@ const MeetingScreen: React.FC = React.memo(() => {
       {userSessionAudios?.map((userSessionAudio, key) => {
         return (
           <Box key={key.toString()}>
-            {userSessionAudio.audioStream && (
+            {userSessionAudio.stream && (
               <audio
                 ref={(audio) => {
-                  if (audio) audio.srcObject = userSessionAudio.audioStream;
+                  if (audio) audio.srcObject = userSessionAudio.stream;
                 }}
                 autoPlay
               />
@@ -58,11 +71,7 @@ const MeetingScreen: React.FC = React.memo(() => {
           </Box>
         );
       })}
-      <FooterToolbar
-        toggleAudio={toggleAudio}
-        toggleVideo={toggleVideo}
-        toggleScreen={toggleScreen}
-      />
+      <FooterToolbar />
     </PageScreen>
   );
 });

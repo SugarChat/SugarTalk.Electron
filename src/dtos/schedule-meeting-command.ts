@@ -47,10 +47,10 @@ export interface IUserSession {
   isSharingCamera: boolean;
 }
 
-export interface IUserSessionAudio {
+export interface IUserSessionMediaStream {
   userSessionId: string;
   connectionId: string;
-  audioStream: MediaStream;
+  stream: MediaStream;
 }
 
 export interface IUserSessionConnection {
