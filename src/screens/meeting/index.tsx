@@ -29,7 +29,6 @@ const MeetingScreen: React.FC = React.memo(() => {
           <Box style={styles.sharingRootContainer}>
             <Box style={styles.sharingContainer}>
               {userSessionVideos?.map((userSessionVideo, key) => {
-                console.log(userSessionVideo);
                 return (
                   <Box key={key.toString()}>
                     {userSessionVideo.stream && (
@@ -62,21 +61,6 @@ const MeetingScreen: React.FC = React.memo(() => {
               <audio
                 ref={(audio) => {
                   if (audio) audio.srcObject = userSessionAudio.stream;
-                }}
-                autoPlay
-              />
-            )}
-          </Box>
-        );
-      })}
-      {userSessionVideos?.map((userSessionVideo, key) => {
-        console.log(userSessionVideo);
-        return (
-          <Box key={key.toString()}>
-            {userSessionVideo.stream && (
-              <video
-                ref={(video) => {
-                  if (video) video.srcObject = userSessionVideo.stream;
                 }}
                 autoPlay
               />

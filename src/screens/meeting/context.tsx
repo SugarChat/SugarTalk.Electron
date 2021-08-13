@@ -189,10 +189,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
         mandatory: {
           chromeMediaSource: 'desktop',
           chromeMediaSourceId: currentScreenId,
-          minWidth: 1080,
-          maxWidth: 1080,
-          minHeight: 520,
-          maxHeight: 520,
+          minWidth: 1680,
+          maxWidth: 1680,
+          minHeight: 860,
+          maxHeight: 860,
         },
       };
       navigator.mediaDevices
@@ -201,7 +201,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
           audio: false,
         })
         .then(async (screenStream) => {
-          console.log('share screen', screenStream);
           const currentUser = userSessions.find((x) => x.isSelf);
           if (currentUser) {
             const userSession: IUserSession = {
@@ -405,8 +404,8 @@ export const MeetingProvider: React.FC = ({ children }) => {
       );
     });
     peer.addEventListener('track', (e: RTCTrackEvent) => {
+      const stream = e.streams[0];
       if (e.track.kind === 'audio') {
-        const stream = e.streams[0];
         setUserSessionAudios(
           (oldUserSessionAudios: IUserSessionMediaStream[]) => [
             ...oldUserSessionAudios,
@@ -418,8 +417,21 @@ export const MeetingProvider: React.FC = ({ children }) => {
           ]
         );
       } else if (e.track.kind === 'video') {
-        const stream = e.streams[0];
-        console.log('----video-----', stream);
+        setUserSessions((oldUserSessions: IUserSession[]) => {
+          const changedUserSession = oldUserSessions.find(
+            (x) => x.connectionId === userSession.connectionId
+          );
+          if (changedUserSession)
+            changedUserSession.isSharingScreen = userSession.isSharingScreen;
+          return [...oldUserSessions];
+        });
+        setUserSessionAudios(
+          (oldUserSessionAudios: IUserSessionMediaStream[]) =>
+            oldUserSessionAudios.filter(
+              (userSessionAudio: IUserSessionMediaStream) =>
+                userSessionAudio.connectionId !== userSession.connectionId
+            )
+        );
         setUserSessionVideos(
           (oldUserSessionVideos: IUserSessionMediaStream[]) => [
             ...oldUserSessionVideos,
