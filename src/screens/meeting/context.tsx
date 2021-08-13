@@ -318,7 +318,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
             matchedSessionConnectionManager.peerConnections.find(
               (x) => x.peerConnection.id === peerConnectionId
             );
-          console.log('process-answer', matchedPeerConnection);
           matchedPeerConnection?.peerConnection.connection.setRemoteDescription(
             new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
           );
@@ -471,7 +470,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
       'ProcessOfferAsync',
       userSession.connectionId,
       offer.sdp,
-      isSelf,
       userSession.isSharingCamera,
       userSession.isSharingScreen,
       peerConnectionId
