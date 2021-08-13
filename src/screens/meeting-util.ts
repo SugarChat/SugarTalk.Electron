@@ -13,6 +13,7 @@ export const createMeetingWindow = (
     webPreferences: {
       nodeIntegration: true,
       enableRemoteModule: true,
+      contextIsolation: false,
     },
   });
   meetingWindow.loadURL(
