@@ -184,32 +184,36 @@ export const MeetingProvider: React.FC = ({ children }) => {
   }, [isMuted, mediaStreamInitialized]);
 
   React.useEffect(() => {
-    if (currentScreenId) {
-      const videoConstraints: any = {
-        mandatory: {
-          chromeMediaSource: 'desktop',
-          chromeMediaSourceId: currentScreenId,
-          minWidth: 1680,
-          maxWidth: 1680,
-          minHeight: 860,
-          maxHeight: 860,
-        },
+    const currentUser = userSessions.find((x) => x.isSelf);
+    if (currentUser) {
+      const userSession: IUserSession = {
+        ...currentUser,
+        isSharingScreen: !!currentScreenId,
       };
-      navigator.mediaDevices
-        .getUserMedia({
-          video: videoConstraints,
-          audio: false,
-        })
-        .then(async (screenStream) => {
-          const currentUser = userSessions.find((x) => x.isSelf);
-          if (currentUser) {
-            const userSession: IUserSession = {
-              ...currentUser,
-              isSharingScreen: true,
-            };
-            await createPeerConnection(userSession, true, screenStream);
-          }
-        });
+      if (currentScreenId) {
+        const videoConstraints: any = {
+          mandatory: {
+            chromeMediaSource: 'desktop',
+            chromeMediaSourceId: currentScreenId,
+            minWidth: 1680,
+            maxWidth: 1680,
+            minHeight: 860,
+            maxHeight: 860,
+          },
+        };
+        navigator.mediaDevices
+          .getUserMedia({
+            video: videoConstraints,
+            audio: false,
+          })
+          .then(async (screenStream) => {
+            if (currentUser) {
+              await createPeerConnection(userSession, true, screenStream);
+            }
+          });
+      } else {
+        if (currentUser) createPeerConnection(userSession, true, undefined);
+      }
     }
   }, [currentScreenId]);
 
@@ -417,6 +421,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
           ]
         );
       } else if (e.track.kind === 'video') {
+        console.log(e.track);
         setUserSessions((oldUserSessions: IUserSession[]) => {
           const changedUserSession = oldUserSessions.find(
             (x) => x.connectionId === userSession.connectionId

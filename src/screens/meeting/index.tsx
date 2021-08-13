@@ -16,8 +16,8 @@ const MeetingScreen: React.FC = React.memo(() => {
     isMuted,
   } = React.useContext(MeetingContext);
 
-  const isSomeoneElseSharingScreenOrCamera = userSessions.some(
-    (x) => x.isSharingScreen || x.isSharingCamera
+  const isSomeoneElseSharingScreen = userSessions.some(
+    (x) => x.isSharingScreen
   );
 
   return (
@@ -25,7 +25,7 @@ const MeetingScreen: React.FC = React.memo(() => {
       <StatusBar />
 
       <Box style={styles.webRTCContainer}>
-        {isSomeoneElseSharingScreenOrCamera && (
+        {isSomeoneElseSharingScreen && (
           <Box style={styles.sharingRootContainer}>
             <Box style={styles.sharingContainer}>
               {userSessionVideos?.map((userSessionVideo, key) => {
@@ -48,7 +48,7 @@ const MeetingScreen: React.FC = React.memo(() => {
             </Box>
           </Box>
         )}
-        {!isSomeoneElseSharingScreenOrCamera && (
+        {!isSomeoneElseSharingScreen && (
           <Box style={styles.sharingRootContainer}>
             <VerticalUserList />
           </Box>
