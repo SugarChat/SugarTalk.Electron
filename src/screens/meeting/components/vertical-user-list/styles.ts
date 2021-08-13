@@ -14,11 +14,15 @@ export const userContainer: CSSProperties = {
   display: 'inline-block',
 };
 
-export const userName: CSSProperties = {
+export const userNameContainer: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
   padding: '1px 0px',
   userSelect: 'none',
   fontSize: '14px',
   textAlign: 'center',
+  height: '25px',
 };
 
 export const avatar: CSSProperties = {

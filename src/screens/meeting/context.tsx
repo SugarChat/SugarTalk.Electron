@@ -12,11 +12,13 @@ import {
 import {
   JoinMeetingCommand,
   IUserSession,
-  IUserSessionConnection,
-  IUserSessionAudio,
+  IUserSessionConnectionManager,
+  IRTCPeerConnectionWrapper,
+  IUserSessionMediaStream,
   ChangeAudioCommand,
 } from '../../dtos/schedule-meeting-command';
 import api from '../../services/api';
+import { GUID } from '../../utils/guid';
 
 export interface IMeetingQueryStringParams {
   meetingId: string;
@@ -28,28 +30,43 @@ export interface IMeetingQueryStringParams {
 interface IMeetingContext {
   isMuted: boolean;
   setIsMuted: React.Dispatch<React.SetStateAction<boolean>>;
+  currentScreenId: string;
+  setCurrentScreenId: React.Dispatch<React.SetStateAction<string>>;
+  isSharingVideo: boolean;
+  setIsSharingVideo: React.Dispatch<React.SetStateAction<boolean>>;
+  isSelectingScreen: boolean;
+  setIsSelectingScreen: React.Dispatch<React.SetStateAction<boolean>>;
   serverConnection:
     | React.MutableRefObject<HubConnection | undefined>
     | undefined;
   meetingNumber: string;
   userSessions: IUserSession[];
-  userSessionAudios: IUserSessionAudio[];
+  userSessionAudios: IUserSessionMediaStream[];
+  userSessionVideos: IUserSessionMediaStream[];
 }
 
 export const MeetingContext = React.createContext<IMeetingContext>({
   isMuted: false,
   setIsMuted: () => {},
+  currentScreenId: '',
+  setCurrentScreenId: () => {},
+  isSharingVideo: false,
+  setIsSharingVideo: () => {},
+  isSelectingScreen: false,
+  setIsSelectingScreen: () => {},
   serverConnection: undefined,
   meetingNumber: '',
   userSessions: [],
   userSessionAudios: [],
+  userSessionVideos: [],
 });
 
 export const MeetingProvider: React.FC = ({ children }) => {
   const [isMuted, setIsMuted] = React.useState<boolean>(false);
-  const [video, setVideo] = React.useState<boolean>(false);
-  const [screen, setScreen] = React.useState<boolean>(false);
-  const [screenSelecting, setScreenSelecting] = React.useState<boolean>(false);
+  const [isSharingVideo, setIsSharingVideo] = React.useState<boolean>(false);
+  const [currentScreenId, setCurrentScreenId] = React.useState<string>('');
+  const [isSelectingScreen, setIsSelectingScreen] =
+    React.useState<boolean>(false);
   const [initialized, setinitialized] = React.useState<boolean>(false);
   const [meetingJoined, setMeetingJoined] = React.useState<boolean>(false);
   const [localUserAdded, setLocalUserAdded] = React.useState<boolean>(false);
@@ -58,8 +75,13 @@ export const MeetingProvider: React.FC = ({ children }) => {
     React.useState<boolean>(false);
   const [userSessions, setUserSessions] = React.useState<IUserSession[]>([]);
   const [userSessionAudios, setUserSessionAudios] = React.useState<
-    IUserSessionAudio[]
+    IUserSessionMediaStream[]
   >([]);
+
+  const [userSessionVideos, setUserSessionVideos] = React.useState<
+    IUserSessionMediaStream[]
+  >([]);
+
   const [meetingNumber, setMeetingNumber] = React.useState<string>('');
   const [meetingParam, setMeetingParam] =
     React.useState<IMeetingQueryStringParams>();
@@ -67,7 +89,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const [mediaStreamInitialized, setMediaStreamInitialized] =
     React.useState<boolean>(false);
   const serverConnection = React.useRef<HubConnection>();
-  const userSessionConnections = React.useRef<IUserSessionConnection[]>([]);
+  const userSessionConnectionManagers = React.useRef<
+    IUserSessionConnectionManager[]
+  >([]);
+  const isLocalUserFinishedSetup = React.useRef<boolean>();
 
   const location = useLocation();
   const { userStore } = useStores();
@@ -137,7 +162,11 @@ export const MeetingProvider: React.FC = ({ children }) => {
   React.useEffect(() => {
     if (initialized) {
       for (let i = 0; i < userSessions.length; i++) {
-        createPeerConnection(userSessions[i], userSessions[i].isSelf);
+        createPeerConnection(
+          userSessions[i],
+          userSessions[i].isSelf,
+          undefined
+        );
       }
     }
   }, [initialized]);
@@ -153,6 +182,37 @@ export const MeetingProvider: React.FC = ({ children }) => {
       }
     }
   }, [isMuted, mediaStreamInitialized]);
+
+  React.useEffect(() => {
+    if (currentScreenId) {
+      const videoConstraints: any = {
+        mandatory: {
+          chromeMediaSource: 'desktop',
+          chromeMediaSourceId: currentScreenId,
+          minWidth: 1080,
+          maxWidth: 1080,
+          minHeight: 520,
+          maxHeight: 520,
+        },
+      };
+      navigator.mediaDevices
+        .getUserMedia({
+          video: videoConstraints,
+          audio: false,
+        })
+        .then(async (screenStream) => {
+          console.log('share screen', screenStream);
+          const currentUser = userSessions.find((x) => x.isSelf);
+          if (currentUser) {
+            const userSession: IUserSession = {
+              ...currentUser,
+              isSharingScreen: true,
+            };
+            await createPeerConnection(userSession, true, screenStream);
+          }
+        });
+    }
+  }, [currentScreenId]);
 
   const changeAudio = (userSessionId: string, muted: boolean) => {
     const changeAudioCcommand: ChangeAudioCommand = {
@@ -211,8 +271,15 @@ export const MeetingProvider: React.FC = ({ children }) => {
         ...oldUserSessions,
         otherUser,
       ]);
-      createPeerConnection(otherUser, otherUser.isSelf);
+      createPeerConnection(otherUser, otherUser.isSelf, undefined);
     });
+
+    serverConnection?.current?.on(
+      'OtherConnectionRecreated',
+      (otherUser: IUserSession) => {
+        createPeerConnection(otherUser, false, undefined);
+      }
+    );
 
     serverConnection.current?.on(
       'OtherAudioChanged',
@@ -238,42 +305,58 @@ export const MeetingProvider: React.FC = ({ children }) => {
         connectionId: string,
         answerSDP: string,
         isSharingCamera: boolean,
-        isSharingScreen: boolean
+        isSharingScreen: boolean,
+        peerConnectionId: string
       ) => {
         const isSelf = connectionId === serverConnection.current?.connectionId;
-
-        const matchedSessionConnection = userSessionConnections.current.find(
-          (x) => x.connectionId === connectionId
-        );
-        if (matchedSessionConnection) {
+        const matchedSessionConnectionManager =
+          userSessionConnectionManagers.current.find(
+            (x) => x.connectionId === connectionId
+          );
+        if (matchedSessionConnectionManager) {
           const matchedPeerConnection =
-            matchedSessionConnection.peerConnections.find(
-              (x) => x.connectionId === connectionId && x.isSelf === isSelf
+            matchedSessionConnectionManager.peerConnections.find(
+              (x) => x.peerConnection.id === peerConnectionId
             );
-          matchedPeerConnection?.peerConnection.setRemoteDescription(
+          console.log('process-answer', matchedPeerConnection);
+          matchedPeerConnection?.peerConnection.connection.setRemoteDescription(
             new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
           );
         }
         if (isSelf) {
-          serverConnection?.current?.invoke('OnNewUserFinishedSetup');
+          let isConnectionRecreated;
+
+          if (!isLocalUserFinishedSetup.current) {
+            isConnectionRecreated = false;
+            isLocalUserFinishedSetup.current = true;
+          } else {
+            isConnectionRecreated = true;
+          }
+
+          serverConnection?.current?.invoke(
+            'OnLocalUserConnectionCreated',
+            isConnectionRecreated
+          );
         }
       }
     );
 
     serverConnection?.current?.on(
       'AddCandidate',
-      (connectionId: string, candidate: string) => {
+      (connectionId: string, candidate: string, peerConnectionId: string) => {
         const objCandidate = JSON.parse(candidate);
-        const isSelf = connectionId === serverConnection.current?.connectionId;
-        const matchedSessionConnection = userSessionConnections.current.find(
-          (x) => x.connectionId === connectionId
-        );
-        if (matchedSessionConnection) {
+        const matchedSessionConnectionManager =
+          userSessionConnectionManagers.current.find(
+            (x) => x.connectionId === connectionId
+          );
+        if (matchedSessionConnectionManager) {
           const matchedPeerConnection =
-            matchedSessionConnection.peerConnections.find(
-              (x) => x.connectionId === connectionId && x.isSelf === isSelf
+            matchedSessionConnectionManager.peerConnections.find(
+              (x) => x.peerConnection.id === peerConnectionId
             );
-          matchedPeerConnection?.peerConnection.addIceCandidate(objCandidate);
+          matchedPeerConnection?.peerConnection.connection.addIceCandidate(
+            objCandidate
+          );
         }
       }
     );
@@ -288,60 +371,110 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
   const createPeerConnection = async (
     userSession: IUserSession,
-    isSelf: boolean
+    isSelf: boolean,
+    otherStreamToSend: MediaStream | undefined
   ) => {
+    const peerConnectionId = GUID();
     const peer = new RTCPeerConnection();
-    const userSessionConnection: IUserSessionConnection = {
+
+    // 1. find existing user session connection manager and add existing peer connections to new
+    const existingUserSessionConnection =
+      userSessionConnectionManagers.current.find(
+        (x) => x.connectionId === userSession.connectionId
+      );
+    const existingPeerConnections = existingUserSessionConnection
+      ? existingUserSessionConnection.peerConnections
+      : [];
+    const userSessionConnectionManager: IUserSessionConnectionManager = {
+      isSelf,
       userSessionId: userSession.id,
       connectionId: userSession.connectionId,
-      peerConnections: [],
+      peerConnections: [...existingPeerConnections],
     };
+    // 2. remove existing connection manager
+    userSessionConnectionManagers.current =
+      userSessionConnectionManagers.current.filter(
+        (x) => x.connectionId !== userSession.connectionId
+      );
+
     peer.addEventListener('icecandidate', (candidate) => {
       serverConnection?.current?.invoke(
         'ProcessCandidateAsync',
         userSession.connectionId,
+        peerConnectionId,
         candidate
       );
     });
     peer.addEventListener('track', (e: RTCTrackEvent) => {
       if (e.track.kind === 'audio') {
         const stream = e.streams[0];
-        setUserSessionAudios((oldUserSessionAudios: IUserSessionAudio[]) => [
-          ...oldUserSessionAudios,
-          {
-            userSessionId: userSession.id,
-            connectionId: userSession.connectionId,
-            audioStream: stream,
-          },
-        ]);
+        setUserSessionAudios(
+          (oldUserSessionAudios: IUserSessionMediaStream[]) => [
+            ...oldUserSessionAudios,
+            {
+              userSessionId: userSession.id,
+              connectionId: userSession.connectionId,
+              stream,
+            },
+          ]
+        );
+      } else if (e.track.kind === 'video') {
+        const stream = e.streams[0];
+        console.log('----video-----', stream);
+        setUserSessionVideos(
+          (oldUserSessionVideos: IUserSessionMediaStream[]) => [
+            ...oldUserSessionVideos,
+            {
+              userSessionId: userSession.id,
+              connectionId: userSession.connectionId,
+              stream,
+            },
+          ]
+        );
       }
     });
+
     if (isSelf) {
       mediaStream.current?.getTracks().forEach((track: MediaStreamTrack) => {
         if (mediaStream.current) peer.addTrack(track, mediaStream.current);
       });
+
+      if (otherStreamToSend) {
+        otherStreamToSend
+          .getTracks()
+          .forEach((track) => peer.addTrack(track, otherStreamToSend));
+      }
     }
+
     const offer = await peer.createOffer({
       offerToReceiveAudio: !isSelf,
       offerToReceiveVideo: !isSelf,
     });
+
     await peer.setLocalDescription(offer);
-    userSessionConnection.peerConnections.push({
-      isSelf,
-      connectionId: userSession.connectionId,
-      peerConnection: peer,
+
+    const peerConnectionWrapper: IRTCPeerConnectionWrapper = {
+      id: peerConnectionId,
+      connection: peer,
+    };
+
+    userSessionConnectionManager.peerConnections.push({
+      peerConnection: peerConnectionWrapper,
     });
-    userSessionConnections.current = [
-      ...userSessionConnections.current,
-      userSessionConnection,
+
+    userSessionConnectionManagers.current = [
+      ...userSessionConnectionManagers.current,
+      userSessionConnectionManager,
     ];
+
     await serverConnection?.current?.invoke(
       'ProcessOfferAsync',
       userSession.connectionId,
       offer.sdp,
       isSelf,
       userSession.isSharingCamera,
-      userSession.isSharingScreen
+      userSession.isSharingScreen,
+      peerConnectionId
     );
   };
 
@@ -352,16 +485,17 @@ export const MeetingProvider: React.FC = ({ children }) => {
         (userSession: IUserSession) => userSession.connectionId !== connectionId
       )
     );
-    setUserSessionAudios((oldUserSessionAudios: IUserSessionAudio[]) =>
+    setUserSessionAudios((oldUserSessionAudios: IUserSessionMediaStream[]) =>
       oldUserSessionAudios.filter(
-        (userSessionAudio: IUserSessionAudio) =>
+        (userSessionAudio: IUserSessionMediaStream) =>
           userSessionAudio.connectionId !== connectionId
       )
     );
-    userSessionConnections.current = userSessionConnections.current.filter(
-      (userSessionConnection) =>
-        userSessionConnection.connectionId !== connectionId
-    );
+    userSessionConnectionManagers.current =
+      userSessionConnectionManagers.current.filter(
+        (userSessionConnectionManager) =>
+          userSessionConnectionManager.connectionId !== connectionId
+      );
   };
 
   return (
@@ -373,6 +507,13 @@ export const MeetingProvider: React.FC = ({ children }) => {
         meetingNumber,
         userSessions,
         userSessionAudios,
+        isSharingVideo,
+        setIsSharingVideo,
+        currentScreenId,
+        setCurrentScreenId,
+        isSelectingScreen,
+        setIsSelectingScreen,
+        userSessionVideos,
       }}
     >
       {children && children}
