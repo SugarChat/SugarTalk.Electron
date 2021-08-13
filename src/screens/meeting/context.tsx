@@ -196,11 +196,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
             chromeMediaSource: 'desktop',
             chromeMediaSourceId: currentScreenId,
           },
-          optional: [
-            { minFrameRate: 120 },
-            { maxWidth: 1660 },
-            { maxHeigth: 1200 },
-          ],
+          optional: [{ minFrameRate: 30 }, { aspectRatio: 16 / 9 }],
         };
         navigator.mediaDevices
           .getUserMedia({
@@ -208,6 +204,13 @@ export const MeetingProvider: React.FC = ({ children }) => {
             audio: false,
           })
           .then(async (screenStream) => {
+            screenStream.getVideoTracks().forEach((x) =>
+              x.applyConstraints({
+                width: { exact: 1280 },
+                height: { max: 1080 },
+                frameRate: { min: 30, ideal: 45, max: 45 },
+              })
+            );
             if (currentUser) {
               await createPeerConnection(userSession, true, screenStream);
             }
@@ -427,7 +430,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
           ]
         );
       } else if (e.track.kind === 'video') {
-        console.log(e.track);
         setUserSessions((oldUserSessions: IUserSession[]) => {
           const changedUserSession = oldUserSessions.find(
             (x) => x.connectionId === userSession.connectionId
