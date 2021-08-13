@@ -195,11 +195,12 @@ export const MeetingProvider: React.FC = ({ children }) => {
           mandatory: {
             chromeMediaSource: 'desktop',
             chromeMediaSourceId: currentScreenId,
-            minWidth: 1680,
-            maxWidth: 1680,
-            minHeight: 860,
-            maxHeight: 860,
           },
+          optional: [
+            { minFrameRate: 120 },
+            { maxWidth: 1660 },
+            { maxHeigth: 1200 },
+          ],
         };
         navigator.mediaDevices
           .getUserMedia({
@@ -211,9 +212,8 @@ export const MeetingProvider: React.FC = ({ children }) => {
               await createPeerConnection(userSession, true, screenStream);
             }
           });
-      } else {
-        if (currentUser) createPeerConnection(userSession, true, undefined);
-      }
+      } else if (currentUser)
+        createPeerConnection(userSession, true, undefined);
     }
   }, [currentScreenId]);
 
@@ -410,6 +410,12 @@ export const MeetingProvider: React.FC = ({ children }) => {
     peer.addEventListener('track', (e: RTCTrackEvent) => {
       const stream = e.streams[0];
       if (e.track.kind === 'audio') {
+        // setUserSessionAudios((oldUserSessionAudios: IUserSession[]) =>
+        //   oldUserSessions.filter(
+        //     (userSession: IUserSession) =>
+        //       userSession.connectionId !== connectionId
+        //   )
+        // );
         setUserSessionAudios(
           (oldUserSessionAudios: IUserSessionMediaStream[]) => [
             ...oldUserSessionAudios,
