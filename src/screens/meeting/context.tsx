@@ -425,13 +425,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
             changedUserSession.isSharingScreen = userSession.isSharingScreen;
           return [...oldUserSessions];
         });
-        setUserSessionAudios(
-          (oldUserSessionAudios: IUserSessionMediaStream[]) =>
-            oldUserSessionAudios.filter(
-              (userSessionAudio: IUserSessionMediaStream) =>
-                userSessionAudio.connectionId !== userSession.connectionId
-            )
-        );
         setUserSessionVideos(
           (oldUserSessionVideos: IUserSessionMediaStream[]) => [
             ...oldUserSessionVideos,
