@@ -53,14 +53,18 @@ export interface IUserSessionMediaStream {
   stream: MediaStream;
 }
 
-export interface IUserSessionConnection {
+export interface IUserSessionConnectionManager {
+  isSelf: boolean;
   userSessionId: string;
   connectionId: string;
   peerConnections: IUserRTCPeerConnection[];
 }
 
 export interface IUserRTCPeerConnection {
-  isSelf: boolean;
-  connectionId: string;
-  peerConnection: RTCPeerConnection;
+  peerConnection: IRTCPeerConnectionWrapper;
+}
+
+export interface IRTCPeerConnectionWrapper {
+  id: string;
+  connection: RTCPeerConnection;
 }

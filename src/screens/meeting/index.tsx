@@ -20,8 +20,6 @@ const MeetingScreen: React.FC = React.memo(() => {
     (x) => x.isSharingScreen || x.isSharingCamera
   );
 
-  console.log(userSessionVideos);
-
   return (
     <PageScreen style={styles.root}>
       <StatusBar />
@@ -64,6 +62,21 @@ const MeetingScreen: React.FC = React.memo(() => {
               <audio
                 ref={(audio) => {
                   if (audio) audio.srcObject = userSessionAudio.stream;
+                }}
+                autoPlay
+              />
+            )}
+          </Box>
+        );
+      })}
+      {userSessionVideos?.map((userSessionVideo, key) => {
+        console.log(userSessionVideo);
+        return (
+          <Box key={key.toString()}>
+            {userSessionVideo.stream && (
+              <video
+                ref={(video) => {
+                  if (video) video.srcObject = userSessionVideo.stream;
                 }}
                 autoPlay
               />
