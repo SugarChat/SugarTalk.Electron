@@ -71,6 +71,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const [isSelectingScreen, setIsSelectingScreen] =
     React.useState<boolean>(false);
   const [meetingJoined, setMeetingJoined] = React.useState<boolean>(false);
+  const [localUserAdded, setLocalUserAdded] = React.useState<boolean>(false);
   const [signalrConnected, setSignalrConnected] =
     React.useState<boolean>(false);
   const [userSessions, setUserSessions] = React.useState<IUserSession[]>([]);
@@ -152,23 +153,35 @@ export const MeetingProvider: React.FC = ({ children }) => {
   }, [signalrConnected]);
 
   React.useEffect(() => {
-    userSessions.map((userSession) => {
-      const hasConnection =
-        userSessionConnectionManager.current.peerConnections.some(
-          (x) => x.userSessionId === userSession.id
+    if (localUserAdded) {
+      const selfUserSession = userSessions.find((x) => x.isSelf);
+      if (selfUserSession) {
+        createPeerConnection(
+          selfUserSession,
+          selfUserSession.isSelf,
+          undefined
         );
-      if (
-        (userSession.isSelf ||
-          (!userSession.isSelf &&
-            userSession.connectionStatus ===
-              UserSessionConnectionStatus.connected)) &&
-        !hasConnection
-      ) {
-        console.log('create peer connection for', userSession);
-        createPeerConnection(userSession, userSession.isSelf, undefined);
       }
-      return userSession;
-    });
+    }
+  }, [localUserAdded]);
+
+  React.useEffect(() => {
+    userSessions
+      .filter((x) => !x.isSelf)
+      .map((userSession) => {
+        const hasConnection =
+          userSessionConnectionManager.current.peerConnections.some(
+            (x) => x.userSessionId === userSession.id
+          );
+        if (
+          userSession.connectionStatus ===
+            UserSessionConnectionStatus.connected &&
+          !hasConnection
+        ) {
+          createPeerConnection(userSession, userSession.isSelf, undefined);
+        }
+        return userSession;
+      });
   }, [userSessions]);
 
   useInterval(() => {}, 1000);
@@ -214,13 +227,20 @@ export const MeetingProvider: React.FC = ({ children }) => {
               })
             );
             if (currentUser) {
-              await createPeerConnection(userSession, true, screenStream);
+              await recreateConnectionForShareScreen(userSession, screenStream);
             }
           });
       } else if (currentUser)
-        createPeerConnection(userSession, true, undefined);
+        recreateConnectionForShareScreen(userSession, undefined);
     }
   }, [currentScreenId]);
+
+  const recreateConnectionForShareScreen = async (
+    userSession: IUserSession,
+    screenStream: MediaStream | undefined
+  ) => {
+    await createPeerConnection(userSession, true, screenStream);
+  };
 
   const changeAudio = (userSessionId: string, muted: boolean) => {
     const changeAudioCcommand: ChangeAudioCommand = {
@@ -255,6 +275,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
         ...oldUserSessions,
         localUser,
       ]);
+      setLocalUserAdded(true);
     });
 
     serverConnection.current?.on(
@@ -287,12 +308,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
             (x) => x.userSessionId !== otherUser.id
           );
         setUserSessions((oldUserSessions: IUserSession[]) => {
-          const changedUserSession = oldUserSessions.find(
-            (x) => x.id === otherUser.id
-          );
-          if (changedUserSession)
-            changedUserSession.connectionStatus = otherUser.connectionStatus;
-          return [...oldUserSessions];
+          const updateUserSessions = oldUserSessions.map((userSession) => {
+            return userSession.id === otherUser.id ? otherUser : userSession;
+          });
+          return [...updateUserSessions];
         });
       }
     );
@@ -406,6 +425,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
           const changedUserSession = oldUserSessions.find(
             (x) => x.connectionId === userSession.connectionId
           );
+          console.log(userSession.isSharingScreen);
           if (changedUserSession)
             changedUserSession.isSharingScreen = userSession.isSharingScreen;
           return [...oldUserSessions];
@@ -465,7 +485,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
   };
 
   const removeUserSession = (connectionId: string) => {
-    // TODO 理论上可能需要把对于的usersession里面的RTCPeerConnection清理一下
+    userSessionConnectionManager.current.peerConnections =
+      userSessionConnectionManager.current.peerConnections.filter(
+        (x) => x.connectionId !== connectionId
+      );
     setUserSessions((oldUserSessions: IUserSession[]) =>
       oldUserSessions.filter(
         (userSession: IUserSession) => userSession.connectionId !== connectionId
