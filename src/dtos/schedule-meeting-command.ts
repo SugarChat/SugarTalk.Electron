@@ -43,8 +43,7 @@ export interface MeetingSession {
   meetingId: string;
   meetingNumber: string;
   meetingType: MeetingType;
-  userSessions: Record<string, IUserSession>;
-  allUserSessions: IUserSession[];
+  userSessions: IUserSession[];
 }
 
 export interface IUserSession {

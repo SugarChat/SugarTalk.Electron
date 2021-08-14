@@ -19,6 +19,7 @@ import {
   UpdateStatusCommand,
   UserSessionConnectionStatus,
   IUserRTCPeerConnection,
+  GetMeetingSessionRequest,
 } from '../../dtos/schedule-meeting-command';
 import api from '../../services/api';
 import { GUID } from '../../utils/guid';
@@ -72,6 +73,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
     React.useState<boolean>(false);
   const [meetingJoined, setMeetingJoined] = React.useState<boolean>(false);
   const [localUserAdded, setLocalUserAdded] = React.useState<boolean>(false);
+  const [otherUsersAdded, setOtherUsersAdded] = React.useState<boolean>(false);
   const [signalrConnected, setSignalrConnected] =
     React.useState<boolean>(false);
   const [userSessions, setUserSessions] = React.useState<IUserSession[]>([]);
@@ -166,25 +168,14 @@ export const MeetingProvider: React.FC = ({ children }) => {
   }, [localUserAdded]);
 
   React.useEffect(() => {
-    userSessions
-      .filter((x) => !x.isSelf)
-      .map((userSession) => {
-        const hasConnection =
-          userSessionConnectionManager.current.peerConnections.some(
-            (x) => x.userSessionId === userSession.id
-          );
-        if (
-          userSession.connectionStatus ===
-            UserSessionConnectionStatus.connected &&
-          !hasConnection
-        ) {
-          createPeerConnection(userSession, userSession.isSelf, undefined);
-        }
-        return userSession;
-      });
-  }, [userSessions]);
+    if (otherUsersAdded) {
+      connectToOtherUsersIfRequire(userSessions);
+    }
+  }, [otherUsersAdded]);
 
-  useInterval(() => {}, 1000);
+  useInterval(() => {
+    syncMeeting();
+  }, 5000);
 
   React.useEffect(() => {
     if (mediaStreamInitialized && mediaStream.current) {
@@ -235,11 +226,61 @@ export const MeetingProvider: React.FC = ({ children }) => {
     }
   }, [currentScreenId]);
 
+  const syncMeeting = () => {
+    const getMeetingSessionRequest: GetMeetingSessionRequest = {
+      meetingNumber,
+    };
+    api.meeting.getMeetingSession(getMeetingSessionRequest).then((response) => {
+      const connectionId = serverConnection.current?.connectionId;
+      const newUserSessions = response.data.userSessions.map((userSession) => {
+        userSession.isSelf = userSession.connectionId === connectionId;
+        return userSession;
+      });
+      setUserSessions(newUserSessions);
+      connectToOtherUsersIfRequire(newUserSessions);
+    });
+  };
+
+  const connectToOtherUsersIfRequire = (otherUsers: IUserSession[]) => {
+    otherUsers
+      .filter((x) => !x.isSelf)
+      .map((otherUser) => {
+        const hasConnection =
+          userSessionConnectionManager.current.peerConnections.some(
+            (x) => x.userSessionId === otherUser.id
+          );
+        if (
+          otherUser.connectionStatus ===
+            UserSessionConnectionStatus.connected &&
+          !hasConnection
+        ) {
+          createPeerConnection(otherUser, false, undefined);
+        }
+        return otherUser;
+      });
+  };
+
   const recreateConnectionForShareScreen = async (
     userSession: IUserSession,
     screenStream: MediaStream | undefined
   ) => {
+    closeAndRemoveConnectionsFromUserSession(userSession);
     await createPeerConnection(userSession, true, screenStream);
+  };
+
+  const closeAndRemoveConnectionsFromUserSession = (
+    userSession: IUserSession
+  ) => {
+    userSessionConnectionManager.current.peerConnections =
+      userSessionConnectionManager.current.peerConnections
+        .map((connection) => {
+          if (connection.userSessionId === userSession.id) {
+            connection.peerConnection.connection.close();
+            return undefined;
+          }
+          return connection;
+        })
+        .filter((x) => x !== undefined) as IUserRTCPeerConnection[];
   };
 
   const changeAudio = (userSessionId: string, muted: boolean) => {
@@ -289,6 +330,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
           ...oldUserSessions,
           ...otherUsers,
         ]);
+        setOtherUsersAdded(true);
       }
     );
 
@@ -300,19 +342,15 @@ export const MeetingProvider: React.FC = ({ children }) => {
       ]);
     });
 
+    serverConnection?.current?.on('OtherLeft', (otherUser: IUserSession) => {
+      closeAndRemoveConnectionsFromUserSession(otherUser);
+      removeUserSession(otherUser);
+    });
+
     serverConnection?.current?.on(
       'OtherUserSessionStatusChanged',
       (otherUser: IUserSession) => {
-        userSessionConnectionManager.current.peerConnections =
-          userSessionConnectionManager.current.peerConnections.filter(
-            (x) => x.userSessionId !== otherUser.id
-          );
-        setUserSessions((oldUserSessions: IUserSession[]) => {
-          const updateUserSessions = oldUserSessions.map((userSession) => {
-            return userSession.id === otherUser.id ? otherUser : userSession;
-          });
-          return [...updateUserSessions];
-        });
+        closeAndRemoveConnectionsFromUserSession(otherUser);
       }
     );
 
@@ -329,10 +367,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
         });
       }
     );
-
-    serverConnection?.current?.on('OtherLeft', (connectionId: string) => {
-      removeUserSession(connectionId);
-    });
 
     serverConnection?.current?.on(
       'ProcessAnswer',
@@ -485,20 +519,17 @@ export const MeetingProvider: React.FC = ({ children }) => {
     );
   };
 
-  const removeUserSession = (connectionId: string) => {
-    userSessionConnectionManager.current.peerConnections =
-      userSessionConnectionManager.current.peerConnections.filter(
-        (x) => x.connectionId !== connectionId
-      );
+  const removeUserSession = (userSession: IUserSession) => {
     setUserSessions((oldUserSessions: IUserSession[]) =>
       oldUserSessions.filter(
-        (userSession: IUserSession) => userSession.connectionId !== connectionId
+        (oldUserSession: IUserSession) =>
+          oldUserSession.connectionId !== userSession.connectionId
       )
     );
     setUserSessionAudios((oldUserSessionAudios: IUserSessionMediaStream[]) =>
       oldUserSessionAudios.filter(
         (userSessionAudio: IUserSessionMediaStream) =>
-          userSessionAudio.connectionId !== connectionId
+          userSessionAudio.connectionId !== userSession.connectionId
       )
     );
   };
