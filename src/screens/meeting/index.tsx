@@ -17,7 +17,7 @@ const MeetingScreen: React.FC = React.memo(() => {
   } = React.useContext(MeetingContext);
 
   const isSomeoneElseSharingScreen = userSessions.some(
-    (x) => x.isSharingScreen
+    (x) => x.isSharingScreen && !x.isSelf
   );
 
   return (

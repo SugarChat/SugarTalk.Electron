@@ -356,15 +356,16 @@ export const MeetingProvider: React.FC = ({ children }) => {
             connectionId,
             connectionStatus: UserSessionConnectionStatus.connected,
           };
-          const response = await api.meeting.updateStatus(updateStatusCommand);
-          setUserSessions((oldUserSessions: IUserSession[]) => {
-            const changedUserSession = oldUserSessions.find(
-              (x) => x.connectionId === response.data.connectionId
-            );
-            if (changedUserSession)
-              changedUserSession.connectionStatus =
-                response.data.connectionStatus;
-            return [...oldUserSessions];
+          api.meeting.updateStatus(updateStatusCommand).then((response) => {
+            response.data.isSelf = true;
+            setUserSessions((oldUserSessions: IUserSession[]) => {
+              const updateUserSessions = oldUserSessions.map((userSession) => {
+                return userSession.id === response.data.id
+                  ? response.data
+                  : userSession;
+              });
+              return [...updateUserSessions];
+            });
           });
         }
       }
@@ -411,21 +412,22 @@ export const MeetingProvider: React.FC = ({ children }) => {
       const stream = e.streams[0];
       if (e.track.kind === 'audio') {
         setUserSessionAudios(
-          (oldUserSessionAudios: IUserSessionMediaStream[]) => [
-            ...oldUserSessionAudios,
-            {
-              userSessionId: userSession.id,
-              connectionId: userSession.connectionId,
-              stream,
-            },
-          ]
+          (oldUserSessionAudios: IUserSessionMediaStream[]) => {
+            return [
+              ...oldUserSessionAudios,
+              {
+                userSessionId: userSession.id,
+                connectionId: userSession.connectionId,
+                stream,
+              },
+            ];
+          }
         );
       } else if (e.track.kind === 'video') {
         setUserSessions((oldUserSessions: IUserSession[]) => {
           const changedUserSession = oldUserSessions.find(
             (x) => x.connectionId === userSession.connectionId
           );
-          console.log(userSession.isSharingScreen);
           if (changedUserSession)
             changedUserSession.isSharingScreen = userSession.isSharingScreen;
           return [...oldUserSessions];
@@ -447,7 +449,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
       mediaStream.current?.getTracks().forEach((track: MediaStreamTrack) => {
         if (mediaStream.current) peer.addTrack(track, mediaStream.current);
       });
-
       if (otherStreamToSend) {
         otherStreamToSend
           .getTracks()
