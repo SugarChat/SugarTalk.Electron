@@ -16,8 +16,8 @@ const MeetingScreen: React.FC = React.memo(() => {
     isMuted,
   } = React.useContext(MeetingContext);
 
-  const isSomeoneElseSharingScreenOrCamera = userSessions.some(
-    (x) => x.isSharingScreen || x.isSharingCamera
+  const isSomeoneElseSharingScreen = userSessions.some(
+    (x) => x.isSharingScreen && !x.isSelf
   );
 
   return (
@@ -25,11 +25,10 @@ const MeetingScreen: React.FC = React.memo(() => {
       <StatusBar />
 
       <Box style={styles.webRTCContainer}>
-        {isSomeoneElseSharingScreenOrCamera && (
+        {isSomeoneElseSharingScreen && (
           <Box style={styles.sharingRootContainer}>
             <Box style={styles.sharingContainer}>
               {userSessionVideos?.map((userSessionVideo, key) => {
-                console.log(userSessionVideo);
                 return (
                   <Box key={key.toString()}>
                     {userSessionVideo.stream && (
@@ -49,7 +48,7 @@ const MeetingScreen: React.FC = React.memo(() => {
             </Box>
           </Box>
         )}
-        {!isSomeoneElseSharingScreenOrCamera && (
+        {!isSomeoneElseSharingScreen && (
           <Box style={styles.sharingRootContainer}>
             <VerticalUserList />
           </Box>
@@ -62,21 +61,6 @@ const MeetingScreen: React.FC = React.memo(() => {
               <audio
                 ref={(audio) => {
                   if (audio) audio.srcObject = userSessionAudio.stream;
-                }}
-                autoPlay
-              />
-            )}
-          </Box>
-        );
-      })}
-      {userSessionVideos?.map((userSessionVideo, key) => {
-        console.log(userSessionVideo);
-        return (
-          <Box key={key.toString()}>
-            {userSessionVideo.stream && (
-              <video
-                ref={(video) => {
-                  if (video) video.srcObject = userSessionVideo.stream;
                 }}
                 autoPlay
               />
