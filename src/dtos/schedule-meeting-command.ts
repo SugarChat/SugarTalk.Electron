@@ -5,6 +5,12 @@ export enum MeetingType {
   schedule,
 }
 
+export enum UserSessionConnectionStatus {
+  connecting,
+  connected,
+  disconnected,
+}
+
 export interface ScheduleMeetingCommand {
   id: string;
   meetingType: MeetingType;
@@ -16,8 +22,13 @@ export interface JoinMeetingCommand {
 }
 
 export interface ChangeAudioCommand {
-  UserSessionId: string;
+  userSessionId: string;
   isMuted: boolean;
+}
+
+export interface UpdateStatusCommand {
+  connectionId: string;
+  connectionStatus: UserSessionConnectionStatus;
 }
 
 export interface MeetingDto {
@@ -45,6 +56,7 @@ export interface IUserSession {
   isMuted: boolean;
   isSharingScreen: boolean;
   isSharingCamera: boolean;
+  connectionStatus: UserSessionConnectionStatus;
 }
 
 export interface IUserSessionMediaStream {
@@ -54,13 +66,13 @@ export interface IUserSessionMediaStream {
 }
 
 export interface IUserSessionConnectionManager {
-  isSelf: boolean;
-  userSessionId: string;
-  connectionId: string;
   peerConnections: IUserRTCPeerConnection[];
 }
 
 export interface IUserRTCPeerConnection {
+  isSelf: boolean;
+  userSessionId: string;
+  connectionId: string;
   peerConnection: IRTCPeerConnectionWrapper;
 }
 
