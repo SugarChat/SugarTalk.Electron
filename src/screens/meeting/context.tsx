@@ -175,7 +175,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
   useInterval(() => {
     syncMeeting();
-  }, 5000);
+  }, 2500);
 
   React.useEffect(() => {
     if (mediaStreamInitialized && mediaStream.current) {
@@ -283,12 +283,33 @@ export const MeetingProvider: React.FC = ({ children }) => {
         .filter((x) => x !== undefined) as IUserRTCPeerConnection[];
   };
 
+  const updateUserSession = (userSession: IUserSession) => {
+    setUserSessions((oldUserSessions: IUserSession[]) => {
+      const updateUserSessions = oldUserSessions.map((oldUserSession) => {
+        return oldUserSession.id === userSession.id
+          ? userSession
+          : oldUserSession;
+      });
+      return [...updateUserSessions];
+    });
+  };
+
+  const removeUserSession = (userSession: IUserSession) => {
+    setUserSessions((oldUserSessions: IUserSession[]) =>
+      oldUserSessions.filter(
+        (oldUserSession: IUserSession) =>
+          oldUserSession.connectionId !== userSession.connectionId
+      )
+    );
+    closeAndRemoveConnectionsFromUserSession(userSession);
+  };
+
   const changeAudio = (userSessionId: string, muted: boolean) => {
-    const changeAudioCcommand: ChangeAudioCommand = {
+    const changeAudioCommand: ChangeAudioCommand = {
       userSessionId,
       isMuted: muted,
     };
-    api.meeting.changeAudio(changeAudioCcommand);
+    api.meeting.changeAudio(changeAudioCommand);
   };
 
   const connectSignalr = (userName: string, meetingId: string) => {
@@ -343,13 +364,13 @@ export const MeetingProvider: React.FC = ({ children }) => {
     });
 
     serverConnection?.current?.on('OtherLeft', (otherUser: IUserSession) => {
-      closeAndRemoveConnectionsFromUserSession(otherUser);
       removeUserSession(otherUser);
     });
 
     serverConnection?.current?.on(
       'OtherUserSessionStatusChanged',
       (otherUser: IUserSession) => {
+        updateUserSession(otherUser);
         closeAndRemoveConnectionsFromUserSession(otherUser);
       }
     );
@@ -391,15 +412,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
             connectionStatus: UserSessionConnectionStatus.connected,
           };
           api.meeting.updateStatus(updateStatusCommand).then((response) => {
-            response.data.isSelf = true;
-            setUserSessions((oldUserSessions: IUserSession[]) => {
-              const updateUserSessions = oldUserSessions.map((userSession) => {
-                return userSession.id === response.data.id
-                  ? response.data
-                  : userSession;
-              });
-              return [...updateUserSessions];
-            });
+            updateUserSession(response.data);
           });
         }
       }
@@ -516,21 +529,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
       userSession.isSharingCamera,
       userSession.isSharingScreen,
       peerConnectionId
-    );
-  };
-
-  const removeUserSession = (userSession: IUserSession) => {
-    setUserSessions((oldUserSessions: IUserSession[]) =>
-      oldUserSessions.filter(
-        (oldUserSession: IUserSession) =>
-          oldUserSession.connectionId !== userSession.connectionId
-      )
-    );
-    setUserSessionAudios((oldUserSessionAudios: IUserSessionMediaStream[]) =>
-      oldUserSessionAudios.filter(
-        (userSessionAudio: IUserSessionMediaStream) =>
-          userSessionAudio.connectionId !== userSession.connectionId
-      )
     );
   };
 
