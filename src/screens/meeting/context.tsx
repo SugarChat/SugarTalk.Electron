@@ -183,7 +183,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
       const selfUserSession = userSessions.find((x) => x.isSelf);
       if (selfUserSession) {
         selfUserSession.isMuted = isMuted;
-        setUserSessions([...userSessions]);
+        updateUserSession(selfUserSession);
         changeAudio(selfUserSession.id, isMuted);
       }
     }
@@ -283,6 +283,21 @@ export const MeetingProvider: React.FC = ({ children }) => {
         .filter((x) => x !== undefined) as IUserRTCPeerConnection[];
   };
 
+  const removeAudiosAndViedeosFromUserSession = (userSession: IUserSession) => {
+    setUserSessionAudios((oldUserSessionAudios: IUserSessionMediaStream[]) =>
+      oldUserSessionAudios.filter(
+        (oldUserSessionAudio: IUserSessionMediaStream) =>
+          oldUserSessionAudio.userSessionId !== userSession.id
+      )
+    );
+    setUserSessionVideos((oldUserSessionVideos: IUserSessionMediaStream[]) =>
+      oldUserSessionVideos.filter(
+        (oldUserSessionVideo: IUserSessionMediaStream) =>
+          oldUserSessionVideo.userSessionId !== userSession.id
+      )
+    );
+  };
+
   const updateUserSession = (userSession: IUserSession) => {
     setUserSessions((oldUserSessions: IUserSession[]) => {
       const updateUserSessions = oldUserSessions.map((oldUserSession) => {
@@ -301,6 +316,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
           oldUserSession.connectionId !== userSession.connectionId
       )
     );
+    removeAudiosAndViedeosFromUserSession(userSession);
     closeAndRemoveConnectionsFromUserSession(userSession);
   };
 
@@ -371,6 +387,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
       'OtherUserSessionStatusChanged',
       (otherUser: IUserSession) => {
         updateUserSession(otherUser);
+        removeAudiosAndViedeosFromUserSession(otherUser);
         closeAndRemoveConnectionsFromUserSession(otherUser);
       }
     );
@@ -378,14 +395,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
     serverConnection.current?.on(
       'OtherAudioChanged',
       (otherUser: IUserSession) => {
-        setUserSessions((oldUserSessions: IUserSession[]) => {
-          const changedUserSession = oldUserSessions.find(
-            (x) => x.connectionId === otherUser.connectionId
-          );
-          if (changedUserSession)
-            changedUserSession.isMuted = otherUser.isMuted;
-          return [...oldUserSessions];
-        });
+        updateUserSession(otherUser);
       }
     );
 
