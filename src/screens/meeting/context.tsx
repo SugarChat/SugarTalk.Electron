@@ -283,7 +283,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
         .filter((x) => x !== undefined) as IUserRTCPeerConnection[];
   };
 
-  const removeAudiosAndViedeosFromUserSession = (userSession: IUserSession) => {
+  const removeAudiosAndVideosFromUserSession = (userSession: IUserSession) => {
     setUserSessionAudios((oldUserSessionAudios: IUserSessionMediaStream[]) =>
       oldUserSessionAudios.filter(
         (oldUserSessionAudio: IUserSessionMediaStream) =>
@@ -316,7 +316,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
           oldUserSession.connectionId !== userSession.connectionId
       )
     );
-    removeAudiosAndViedeosFromUserSession(userSession);
+    removeAudiosAndVideosFromUserSession(userSession);
     closeAndRemoveConnectionsFromUserSession(userSession);
   };
 
@@ -387,7 +387,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
       'OtherUserSessionStatusChanged',
       (otherUser: IUserSession) => {
         updateUserSession(otherUser);
-        removeAudiosAndViedeosFromUserSession(otherUser);
+        removeAudiosAndVideosFromUserSession(otherUser);
         closeAndRemoveConnectionsFromUserSession(otherUser);
       }
     );
