@@ -16,10 +16,10 @@ import {
   IUserSessionConnectionManager,
   IUserSessionMediaStream,
   ChangeAudioCommand,
-  UpdateStatusCommand,
   UserSessionConnectionStatus,
   IUserRTCPeerConnection,
   GetMeetingSessionRequest,
+  UpdateConnectionStatusCommand,
 } from '../../dtos/schedule-meeting-command';
 import api from '../../services/api';
 import { GUID } from '../../utils/guid';
@@ -384,7 +384,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
     });
 
     serverConnection?.current?.on(
-      'OtherUserSessionStatusChanged',
+      'OtherUserSessionConnectionStatusUpdated',
       (otherUser: IUserSession) => {
         updateUserSession(otherUser);
         removeAudiosAndVideosFromUserSession(otherUser);
@@ -417,13 +417,13 @@ export const MeetingProvider: React.FC = ({ children }) => {
           new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
         );
         if (isSelf) {
-          const updateStatusCommand: UpdateStatusCommand = {
+          const updateConnectionStatusCommand: UpdateConnectionStatusCommand = {
             connectionId,
             connectionStatus: UserSessionConnectionStatus.connected,
           };
-          api.meeting.updateStatus(updateStatusCommand).then((response) => {
-            updateUserSession(response.data);
-          });
+          await api.meeting.updateConnectionStatus(
+            updateConnectionStatusCommand
+          );
         }
       }
     );

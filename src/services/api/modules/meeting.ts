@@ -5,7 +5,7 @@ import {
   ScheduleMeetingCommand,
   JoinMeetingCommand,
   ChangeAudioCommand,
-  UpdateStatusCommand,
+  UpdateConnectionStatusCommand,
   IUserSession,
 } from '../../../dtos/schedule-meeting-command';
 import { SugarTalkResponse } from '../../../dtos/sugar-talk-response';
@@ -45,11 +45,11 @@ export default {
     return response.data;
   },
 
-  updateStatus: async (
-    request: UpdateStatusCommand
+  updateConnectionStatus: async (
+    request: UpdateConnectionStatusCommand
   ): Promise<SugarTalkResponse<IUserSession>> => {
     const response = await api.post<SugarTalkResponse<IUserSession>>(
-      '/userSession/status/update',
+      '/userSession/connection/status/update',
       request
     );
 
