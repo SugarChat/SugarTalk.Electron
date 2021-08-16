@@ -6,15 +6,10 @@ import * as styles from './styles';
 import { FooterToolbar } from './components/footer-toolbar';
 import { MeetingContext, MeetingProvider } from './context';
 import { VerticalUserList } from './components/vertical-user-list';
+import { ScreenSharing } from './components/screen-sharing';
 
 const MeetingScreen: React.FC = React.memo(() => {
-  const {
-    userSessions,
-    userSessionAudios,
-    userSessionVideos,
-    currentScreenId,
-    isMuted,
-  } = React.useContext(MeetingContext);
+  const { userSessions, userSessionAudios } = React.useContext(MeetingContext);
 
   const isSomeoneElseSharingScreen = userSessions.some(
     (x) => x.isSharingScreen && !x.isSelf
@@ -28,20 +23,7 @@ const MeetingScreen: React.FC = React.memo(() => {
         {isSomeoneElseSharingScreen && (
           <Box style={styles.sharingRootContainer}>
             <Box style={styles.sharingContainer}>
-              {userSessionVideos?.map((userSessionVideo, key) => {
-                return (
-                  <Box key={key.toString()}>
-                    {userSessionVideo.stream && (
-                      <video
-                        ref={(video) => {
-                          if (video) video.srcObject = userSessionVideo.stream;
-                        }}
-                        autoPlay
-                      />
-                    )}
-                  </Box>
-                );
-              })}
+              <ScreenSharing />
             </Box>
             <Box style={styles.verticalUserListContainer}>
               <VerticalUserList />
