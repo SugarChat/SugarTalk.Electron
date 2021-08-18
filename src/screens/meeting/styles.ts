@@ -17,18 +17,16 @@ export const sharingRootContainer: CSSProperties = {
   height: '90%',
   padding: '5px',
   display: 'flex',
-  flexDirection: 'row',
+  justifyContent: 'space-between',
 };
 
 export const sharingContainer: CSSProperties = {
   padding: '5px',
-  display: 'flex',
-  flex: 9,
+  width: '100%',
 };
 
 export const verticalUserListContainer: CSSProperties = {
   padding: '5px',
   display: 'flex',
   textAlign: 'center',
-  flex: 1,
 };

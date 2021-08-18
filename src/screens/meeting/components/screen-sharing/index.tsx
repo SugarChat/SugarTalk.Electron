@@ -12,6 +12,7 @@ export const ScreenSharing = () => {
             <Box key={key.toString()}>
               {userSessionVideo.stream && (
                 <video
+                  style={{ width: '98%' }}
                   ref={(video) => {
                     if (video) video.srcObject = userSessionVideo.stream;
                   }}

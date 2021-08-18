@@ -550,23 +550,20 @@ export const MeetingProvider: React.FC = ({ children }) => {
           }
         );
       } else if (e.track.kind === 'video') {
-        setUserSessionVideos(
-          (oldUserSessionVideos: IUserSessionMediaStream[]) => [
-            ...oldUserSessionVideos,
-            {
-              userSessionId: userSession.id,
-              connectionId: userSession.connectionId,
-              stream,
-            },
-          ]
-        );
+        setUserSessionVideos(() => [
+          {
+            userSessionId: userSession.id,
+            connectionId: userSession.connectionId,
+            stream,
+          },
+        ]);
       }
     });
 
     if (streamToSend) {
-      streamToSend
-        .getTracks()
-        .forEach((track) => peer.addTrack(track, streamToSend));
+      streamToSend.getTracks().forEach((track) => {
+        peer.addTrack(track, streamToSend);
+      });
     }
 
     const offer = await peer.createOffer({
