@@ -1,31 +1,44 @@
-import { Box } from '@material-ui/core';
+import { Avatar, Box } from '@material-ui/core';
 import { useLockFn } from 'ahooks';
 import React from 'react';
+import { IUserSession } from '../../../../dtos/schedule-meeting-command';
 import { MeetingContext } from '../../context';
 import * as styles from './styles';
 
 interface IWebRTC {
-  id: string;
-  userName: string;
+  userSession: IUserSession;
   isSelf: boolean;
 }
 
 export interface IWebRTCRef {
-  onProcessAnswer: (connectionId: string, answerSDP: string) => void;
+  onProcessAnswer: (
+    connectionId: string,
+    answerSDP: string,
+    isSharingCamera: boolean,
+    isSharingScreen: boolean
+  ) => void;
   onAddCandidate: (connectionId: string, candidate: string) => void;
-  onNewOfferCreated: (connectionId: string, answerSDP: string) => void;
+  onNewOfferCreated: (
+    connectionId: string,
+    answerSDP: string,
+    isSharingCamera: boolean,
+    isSharingScreen: boolean
+  ) => void;
   toggleVideo: () => void;
   toggleScreen: (screenId?: string) => void;
 }
 
 export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
-  const { id, userName = 'unknown', isSelf } = props;
+  const { userSession, isSelf } = props;
 
   const videoRef = React.useRef<any>();
 
   const audioRef = React.useRef<any>();
 
   const rtcPeerConnection = React.useRef<RTCPeerConnection>();
+
+  const maxVideoWidth: number = 800;
+  const maxVideoHeight: number = 800;
 
   const {
     serverConnection,
@@ -38,16 +51,23 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
   } = React.useContext(MeetingContext);
 
   // 创建接受端
-  const createPeerRecvonly = async () => {
+  const createPeerRecvonly = async (
+    isSharingCamera: boolean,
+    isSharingScreen: boolean
+  ) => {
     const peer = new RTCPeerConnection();
 
     peer.addEventListener('addstream', (e: any) => {
-      videoRef.current.srcObject = e.stream;
+      //videoRef.current.srcObject = e.stream;
       audioRef.current.srcObject = e.stream;
     });
 
     peer.addEventListener('icecandidate', (candidate) => {
-      serverConnection?.current?.invoke('ProcessCandidateAsync', id, candidate);
+      serverConnection?.current?.invoke(
+        'ProcessCandidateAsync',
+        userSession.connectionId,
+        candidate
+      );
     });
 
     const offer = await peer.createOffer({
@@ -59,11 +79,17 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
 
     rtcPeerConnection.current = peer;
 
+    console.log(
+      '----createPeerRecvonly process offer----',
+      userSession.userName
+    );
     await serverConnection?.current?.invoke(
       'ProcessOfferAsync',
-      id,
+      userSession.connectionId,
       offer.sdp,
-      false
+      false,
+      isSharingCamera,
+      isSharingScreen
     );
   };
 
@@ -72,7 +98,11 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
     const peer = new RTCPeerConnection();
 
     peer.addEventListener('icecandidate', (candidate) => {
-      serverConnection?.current?.invoke('ProcessCandidateAsync', id, candidate);
+      serverConnection?.current?.invoke(
+        'ProcessCandidateAsync',
+        userSession.connectionId,
+        candidate
+      );
     });
 
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -86,7 +116,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
       peer.addTrack(track, stream);
     });
 
-    videoRef.current.srcObject = stream;
+    //videoRef.current.srcObject = stream;
 
     const offer = await peer.createOffer({
       offerToReceiveAudio: false,
@@ -97,18 +127,26 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
 
     rtcPeerConnection.current = peer;
 
+    console.log(
+      '----createPeerSendonly process offer----',
+      userSession.isSharingCamera
+    );
     await serverConnection?.current?.invoke(
       'ProcessOfferAsync',
-      id,
+      userSession.connectionId,
       offer.sdp,
-      true
+      true,
+      userSession.isSharingCamera,
+      userSession.isSharingScreen
     );
   };
 
   // 重新创建发送端
   const recreatePeerSendonly = async (
     stream: MediaStream,
-    screenStream: MediaStream | undefined = undefined
+    screenStream: MediaStream | undefined = undefined,
+    isSharingCamera: boolean,
+    isSharingScreen: boolean
   ) => {
     if (videoRef.current?.srcObject) {
       videoRef.current?.srcObject
@@ -131,7 +169,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
       });
     }
 
-    videoRef.current.srcObject = stream;
+    // videoRef.current.srcObject = stream;
 
     const offer = await peer.createOffer({
       offerToReceiveAudio: false,
@@ -142,11 +180,14 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
 
     rtcPeerConnection.current = peer;
 
+    console.log('------', isSharingCamera, isSharingScreen);
     await serverConnection?.current?.invoke(
       'ProcessOfferAsync',
-      id,
+      userSession.connectionId,
       offer?.sdp,
-      true
+      true,
+      isSharingCamera,
+      isSharingScreen
     );
   };
 
@@ -157,7 +198,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
       audio: true,
     });
 
-    await recreatePeerSendonly(stream);
+    await recreatePeerSendonly(stream, undefined, false, false);
   };
 
   // 摄像头
@@ -166,12 +207,13 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
       await resumePeerSendonly();
       setVideo(false);
     } else {
+      console.log('----toggle----');
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
       });
       if (stream) {
-        await recreatePeerSendonly(stream);
+        await recreatePeerSendonly(stream, undefined, true, false);
         setVideo(true);
         setScreen(false);
       }
@@ -205,7 +247,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
         audio: false,
       });
       if (stream && screenStream) {
-        await recreatePeerSendonly(stream, screenStream);
+        await recreatePeerSendonly(stream, screenStream, false, true);
         setScreen(true);
         setVideo(false);
         setScreenSelecting(false);
@@ -213,7 +255,13 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
     }
   });
 
-  const onProcessAnswer = (_connectionId: string, answerSDP: string) => {
+  const onProcessAnswer = (
+    _connectionId: string,
+    answerSDP: string,
+    isSharingCamera: boolean,
+    isSharingScreen: boolean
+  ) => {
+    console.log('------333---', isSharingScreen, isSharingCamera);
     rtcPeerConnection?.current?.setRemoteDescription(
       new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
     );
@@ -224,9 +272,15 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
     rtcPeerConnection?.current?.addIceCandidate(objCandidate);
   };
 
-  const onNewOfferCreated = () => {
+  const onNewOfferCreated = (
+    connectionId: string,
+    answerSDP: string,
+    isSharingCamera: boolean,
+    isSharingScreen: boolean
+  ) => {
+    console.log('-----', isSharingCamera);
     if (!isSelf) {
-      createPeerRecvonly();
+      createPeerRecvonly(isSharingCamera, isSharingScreen);
     }
   };
 
@@ -242,7 +296,7 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
     if (isSelf) {
       createPeerSendonly();
     } else {
-      createPeerRecvonly();
+      createPeerRecvonly(false, false);
     }
   }, [serverConnection?.current]);
 
@@ -256,20 +310,30 @@ export const WebRTC = React.forwardRef<IWebRTCRef, IWebRTC>((props, ref) => {
     }
   }, [audio, isSelf, videoRef.current?.srcObject]);
 
+  const showVideo = userSession.isSharingCamera || userSession.isSharingScreen;
   return (
     <Box component="div" style={styles.videoContainer}>
-      <video
-        ref={videoRef}
-        autoPlay
-        width="200"
-        height="200"
-        style={styles.video}
-        muted={isSelf}
-      />
+      {false && (
+        <video
+          ref={videoRef}
+          autoPlay
+          width={showVideo ? maxVideoWidth : 0}
+          height={showVideo ? maxVideoHeight : 0}
+          style={styles.video}
+          muted={isSelf}
+        />
+      )}
+
+      {!showVideo && (
+        <Avatar src={userSession.userPicture} style={styles.avatar} />
+      )}
+
       {!isSelf && <audio ref={audioRef} autoPlay muted={isSelf} />}
-      <Box component="div" style={styles.userName}>
-        {userName}
-      </Box>
+      {!showVideo && (
+        <Box component="div" style={styles.userName}>
+          {userSession.userName}
+        </Box>
+      )}
     </Box>
   );
 });

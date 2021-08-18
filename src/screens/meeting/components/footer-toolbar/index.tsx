@@ -35,20 +35,29 @@ const ToolbarButton = React.memo((props: IToolbarButton) => {
   );
 });
 
-interface IFooterToolBar {
-  toggleVideo: () => void;
-  toggleScreen: (screenId?: string) => void;
-}
+export const FooterToolbar = React.memo(() => {
+  const {
+    isMuted,
+    currentScreenId,
+    isSharingVideo,
+    isSelectingScreen,
+    userSessions,
+    setIsMuted,
+    setCurrentScreenId,
+    setIsSelectingScreen,
+    setIsSharingVideo,
+  } = React.useContext(MeetingContext);
 
-export const FooterToolbar = React.memo((props: IFooterToolBar) => {
-  const { toggleVideo, toggleScreen } = props;
+  const otherUserSharingScreen = userSessions.some(
+    (x) => x.isSharingScreen && !x.isSelf
+  );
 
-  const { audio, setAudio, video, screen, screenSelecting } =
-    React.useContext(MeetingContext);
+  const isSharingScreen = userSessions.find((x) => x.isSelf)?.isSharingScreen;
 
   React.useEffect(() => {
     const onShareScreenSelected = (_e: unknown, screenId: string) => {
-      toggleScreen(screenId);
+      setCurrentScreenId(screenId);
+      setIsSelectingScreen(false);
     };
 
     ipcRenderer.on('share-screen-selected', onShareScreenSelected);
@@ -59,7 +68,7 @@ export const FooterToolbar = React.memo((props: IFooterToolBar) => {
         onShareScreenSelected
       );
     };
-  }, [toggleScreen]);
+  }, [setCurrentScreenId]);
 
   const onCloseMeeting = () => {
     electron.remote.getCurrentWindow().close();
@@ -79,6 +88,7 @@ export const FooterToolbar = React.memo((props: IFooterToolBar) => {
       minimizable: false,
       webPreferences: {
         nodeIntegration: true,
+        contextIsolation: false,
         enableRemoteModule: true,
       },
     });
@@ -86,22 +96,19 @@ export const FooterToolbar = React.memo((props: IFooterToolBar) => {
   };
 
   const onShareScreen = () => {
-    if (screen) {
-      toggleScreen();
+    if (currentScreenId) {
+      setCurrentScreenId('');
     } else {
+      setIsSelectingScreen(true);
       showScreenSelector();
     }
   };
 
-  const onVideo = async () => {
+  const onVideoClick = async () => {
     const status = await getMediaDeviceAccessAndStatus('camera', true);
     if (status) {
-      toggleVideo();
+      setIsSharingVideo(!isSharingVideo);
     }
-  };
-
-  const onAudio = () => {
-    setAudio(!audio);
   };
 
   return (
@@ -110,24 +117,26 @@ export const FooterToolbar = React.memo((props: IFooterToolBar) => {
         <Grid item container xs={6} justifyContent="flex-start" spacing={1}>
           <Grid item>
             <ToolbarButton
-              onClick={onAudio}
-              text={audio ? '静音' : '解除静音'}
-              icon={audio ? <MicIcon /> : <MicOffIcon />}
+              onClick={() => setIsMuted(!isMuted)}
+              text={!isMuted ? '静音' : '解除静音'}
+              icon={!isMuted ? <MicIcon /> : <MicOffIcon />}
             />
           </Grid>
           <Grid item>
             <ToolbarButton
-              onClick={onVideo}
-              text={video ? '关闭视频' : '开启视频'}
-              icon={video ? <VideocamIcon /> : <VideocamOffIcon />}
+              onClick={onVideoClick}
+              text={isSharingVideo ? '关闭视频' : '开启视频'}
+              icon={isSharingVideo ? <VideocamIcon /> : <VideocamOffIcon />}
             />
           </Grid>
           <Grid item>
             <ToolbarButton
-              disabled={screenSelecting}
+              disabled={isSelectingScreen || otherUserSharingScreen}
               onClick={onShareScreen}
-              text={screen ? '停止共享屏幕' : '共享屏幕'}
-              icon={screen ? <ScreenShareIcon /> : <StopScreenShareIcon />}
+              text={!isSharingScreen ? '共享屏幕' : '停止共享屏幕'}
+              icon={
+                isSharingScreen ? <StopScreenShareIcon /> : <ScreenShareIcon />
+              }
             />
           </Grid>
         </Grid>

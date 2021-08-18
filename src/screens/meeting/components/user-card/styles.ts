@@ -1,17 +1,20 @@
 import { CSSProperties } from 'react';
+export const root: CSSProperties = {
+  padding: 0,
+  backgroundColor: '#fafafa',
+  height: '100%',
+};
 
-export const videoContainer: CSSProperties = {
-  margin: '10px',
-
+export const userContainer: CSSProperties = {
+  margin: '5px',
   display: 'inline-block',
 };
 
-export const video: CSSProperties = {};
-
 export const userName: CSSProperties = {
-  padding: '3px 0px',
+  padding: '1px 0px',
   userSelect: 'none',
-  fontSize: '16px',
+  fontSize: '14px',
+  textAlign: 'center',
 };
 
 export const avatar: CSSProperties = {

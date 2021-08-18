@@ -14,6 +14,7 @@ const getBrowserWindowInstance = () => {
     modal: true,
     webPreferences: {
       nodeIntegration: true,
+      contextIsolation: false,
       enableRemoteModule: true,
     },
   });
