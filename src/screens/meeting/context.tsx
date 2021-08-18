@@ -21,6 +21,7 @@ import {
   GetMeetingSessionRequest,
   UpdateUserSessionWebRtcConnectionStatusCommand,
   UserSessionWebRtcConnectionType,
+  ShareScreenCommand,
 } from '../../dtos/schedule-meeting-command';
 import api from '../../services/api';
 import { GUID } from '../../utils/guid';
@@ -187,13 +188,19 @@ export const MeetingProvider: React.FC = ({ children }) => {
   }, [isMuted, mediaStreamInitialized]);
 
   React.useEffect(() => {
-    const currentUser = userSessions.find((x) => x.isSelf);
-    if (currentUser) {
-      const userSession: IUserSession = {
-        ...currentUser,
-        isSharingScreen: !!currentScreenId,
+    const selfUserSession = userSessions.find((x) => x.isSelf);
+    const shareScreen = async (shareScreenCommand: ShareScreenCommand) => {
+      const response = await api.meeting.shareScreen(shareScreenCommand);
+      updateUserSession(response.data);
+    };
+    if (selfUserSession) {
+      const shareScreenCommand: ShareScreenCommand = {
+        userSessionId: selfUserSession.id,
+        isShared: false,
       };
-      if (currentScreenId) {
+      if (!currentScreenId && selfUserSession.isSharingScreen) {
+        shareScreen(shareScreenCommand);
+      } else {
         const videoConstraints: any = {
           mandatory: {
             chromeMediaSource: 'desktop',
@@ -214,9 +221,9 @@ export const MeetingProvider: React.FC = ({ children }) => {
                 frameRate: { min: 30, ideal: 45, max: 45 },
               })
             );
-            if (currentUser) {
-              await createPeerConnection(userSession, screenStream);
-            }
+            shareScreenCommand.isShared = true;
+            shareScreen(shareScreenCommand);
+            createPeerConnection(selfUserSession, screenStream);
           });
       }
     }
@@ -251,6 +258,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
               x.receiveWebRtcConnectionId === connection.id
           );
         if (!hasConnection) {
+          console.log('create peer');
           createPeerConnection(otherUser, undefined, connection.id);
         }
       }
@@ -297,9 +305,11 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const updateUserSession = (userSession: IUserSession) => {
     setUserSessions((oldUserSessions: IUserSession[]) => {
       const updateUserSessions = oldUserSessions.map((oldUserSession) => {
-        return oldUserSession.id === userSession.id
-          ? userSession
-          : oldUserSession;
+        if (oldUserSession.id === userSession.id) {
+          userSession.isSelf = oldUserSession.isSelf;
+          return userSession;
+        }
+        return oldUserSession;
       });
       return [...updateUserSessions];
     });
@@ -382,6 +392,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
     serverConnection?.current?.on(
       'OtherUserSessionWebRtcConnectionStatusUpdated',
       (otherUser: IUserSession) => {
+        console.log('OtherUserSessionWebRtcConnectionStatusUpdated');
         updateUserSession(otherUser);
         connectToOtherUserIfRequire(otherUser);
       }
@@ -389,6 +400,13 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
     serverConnection.current?.on(
       'OtherAudioChanged',
+      (otherUser: IUserSession) => {
+        updateUserSession(otherUser);
+      }
+    );
+
+    serverConnection.current?.on(
+      'OtherScreenShared',
       (otherUser: IUserSession) => {
         updateUserSession(otherUser);
       }

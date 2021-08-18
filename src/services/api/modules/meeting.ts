@@ -5,6 +5,7 @@ import {
   ScheduleMeetingCommand,
   JoinMeetingCommand,
   ChangeAudioCommand,
+  ShareScreenCommand,
   UpdateUserSessionWebRtcConnectionStatusCommand,
   IUserSession,
 } from '../../../dtos/schedule-meeting-command';
@@ -38,7 +39,18 @@ export default {
     request: ChangeAudioCommand
   ): Promise<SugarTalkResponse<IUserSession>> => {
     const response = await api.post<SugarTalkResponse<IUserSession>>(
-      '/userSession/changeAudio',
+      '/userSession/audio/change',
+      request
+    );
+
+    return response.data;
+  },
+
+  shareScreen: async (
+    request: ShareScreenCommand
+  ): Promise<SugarTalkResponse<IUserSession>> => {
+    const response = await api.post<SugarTalkResponse<IUserSession>>(
+      '/userSession/screen/share',
       request
     );
 
