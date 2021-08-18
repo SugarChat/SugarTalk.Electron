@@ -7,6 +7,7 @@ import {
   ChangeAudioCommand,
   ShareScreenCommand,
   UpdateUserSessionWebRtcConnectionStatusCommand,
+  RemoveUserSessionWebRtcConnectionCommand,
   IUserSession,
 } from '../../../dtos/schedule-meeting-command';
 import { SugarTalkResponse } from '../../../dtos/sugar-talk-response';
@@ -66,6 +67,12 @@ export default {
     );
 
     return response.data;
+  },
+
+  removeUserSessionWebRtcConnection: async (
+    request: RemoveUserSessionWebRtcConnectionCommand
+  ): Promise<void> => {
+    await api.post('/userSession/connection/remove', request);
   },
 
   getMeetingSession: async (

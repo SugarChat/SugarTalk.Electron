@@ -14,6 +14,12 @@ export enum UserSessionWebRtcConnectionType {
   receive,
 }
 
+export enum UserSessionWebRtcConnectionMediaType {
+  audio,
+  video,
+  screen,
+}
+
 export interface ScheduleMeetingCommand {
   id: string;
   meetingType: MeetingType;
@@ -29,9 +35,18 @@ export interface ChangeAudioCommand {
   isMuted: boolean;
 }
 
+export interface ShareScreenCommand {
+  userSessionId: string;
+  isShared: boolean;
+}
+
 export interface UpdateUserSessionWebRtcConnectionStatusCommand {
   userSessionWebRtcConnectionId: string;
   connectionStatus: UserSessionWebRtcConnectionStatus;
+}
+
+export interface RemoveUserSessionWebRtcConnectionCommand {
+  webRtcPeerConnectionId: string;
 }
 
 export interface MeetingDto {
@@ -54,6 +69,7 @@ export interface UserSessionWebRtcConnection {
   userSessionId: string;
   webRtcPeerConnectionId: string;
   receiveWebRtcConnectionId?: string;
+  mediaType: UserSessionWebRtcConnectionMediaType;
   connectionType: UserSessionWebRtcConnectionType;
   connectionStatus: UserSessionWebRtcConnectionStatus;
 }
@@ -86,4 +102,5 @@ export interface IUserRTCPeerConnection {
   peerConnectionId: string;
   peerConnection: RTCPeerConnection;
   receiveWebRtcConnectionId?: string;
+  mediaType: UserSessionWebRtcConnectionMediaType;
 }
