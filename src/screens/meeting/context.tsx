@@ -276,28 +276,29 @@ export const MeetingProvider: React.FC = ({ children }) => {
   };
 
   const connectToOtherUserIfRequire = (otherUser: IUserSession) => {
-    otherUser.webRtcConnections?.forEach((connection) => {
-      if (
-        connection.connectionType === UserSessionWebRtcConnectionType.send &&
-        connection.connectionStatus ===
+    otherUser.webRtcConnections
+      ?.filter((x) => x.connectionType === UserSessionWebRtcConnectionType.send)
+      .forEach((connection) => {
+        if (
+          connection.connectionStatus ===
           UserSessionWebRtcConnectionStatus.connected
-      ) {
-        const hasConnection =
-          userSessionConnectionManager.current.peerConnections.some(
-            (x) =>
-              x.userSessionId === otherUser.id &&
-              x.receiveWebRtcConnectionId === connection.id
-          );
-        if (!hasConnection) {
-          createPeerConnection(
-            otherUser,
-            undefined,
-            connection.mediaType,
-            connection.id
-          );
+        ) {
+          const hasConnection =
+            userSessionConnectionManager.current.peerConnections.some(
+              (x) =>
+                x.userSessionId === otherUser.id &&
+                x.receiveWebRtcConnectionId === connection.id
+            );
+          if (!hasConnection) {
+            createPeerConnection(
+              otherUser,
+              undefined,
+              connection.mediaType,
+              connection.id
+            );
+          }
         }
-      }
-    });
+      });
   };
 
   const connectToOtherUsersIfRequire = (otherUsers: IUserSession[]) => {
