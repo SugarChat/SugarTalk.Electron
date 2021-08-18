@@ -1,18 +1,18 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import { Button, Divider } from '@material-ui/core';
+import queryString from 'query-string';
+import { Guid } from 'guid-typescript';
+import electron from 'electron';
 import Api from '../../services/api';
 import { Header } from '../../components/header';
 import { PageScreen } from '../../components/page-screen';
 import { useStores } from '../../contexts/root-context';
-import queryString from 'query-string';
 import { createMeetingWindow } from '../meeting-util';
 import {
   MeetingType,
   ScheduleMeetingCommand,
 } from '../../dtos/schedule-meeting-command';
-import { Guid } from 'guid-typescript';
-import electron from 'electron';
 import { MeetingInfo } from '../join-meeting';
 import { BaseStoreInstance } from '../../contexts/setup-store';
 
@@ -40,8 +40,6 @@ export const MeetingList = () => {
   const onCreateAdHocMeetingClicked = async () => {
     const meetingInfo = await createMeetingInternal(MeetingType.adHoc);
 
-    console.log(meetingInfo);
-
     if (meetingInfo) {
       const meetingInfoQuery = queryString.stringify(meetingInfo);
 
@@ -65,7 +63,7 @@ export const MeetingList = () => {
 
     return {
       meetingId: meetingDto.data.meetingNumber,
-      userName: userStore.userInfo.name,
+      userName: userStore.userInfo.displayName,
       connectedWithAudio: true,
       connectedWithVideo: false,
     };
