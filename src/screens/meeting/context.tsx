@@ -16,10 +16,11 @@ import {
   IUserSessionConnectionManager,
   IUserSessionMediaStream,
   ChangeAudioCommand,
-  UserSessionConnectionStatus,
+  UserSessionWebRtcConnectionStatus,
   IUserRTCPeerConnection,
   GetMeetingSessionRequest,
-  UpdateConnectionStatusCommand,
+  UpdateUserSessionWebRtcConnectionStatusCommand,
+  UserSessionWebRtcConnectionType,
 } from '../../dtos/schedule-meeting-command';
 import api from '../../services/api';
 import { GUID } from '../../utils/guid';
@@ -158,18 +159,14 @@ export const MeetingProvider: React.FC = ({ children }) => {
     if (localUserAdded) {
       const selfUserSession = userSessions.find((x) => x.isSelf);
       if (selfUserSession) {
-        createPeerConnection(
-          selfUserSession,
-          selfUserSession.isSelf,
-          undefined
-        );
+        createPeerConnection(selfUserSession, undefined);
       }
     }
   }, [localUserAdded]);
 
   React.useEffect(() => {
     if (otherUsersAdded) {
-      connectToOtherUsersIfRequire(userSessions);
+      connectToOtherUsersIfRequire(userSessions.filter((x) => !x.isSelf));
     }
   }, [otherUsersAdded]);
 
@@ -218,11 +215,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
               })
             );
             if (currentUser) {
-              await recreateConnectionForShareScreen(userSession, screenStream);
+              await createPeerConnection(userSession, screenStream);
             }
           });
-      } else if (currentUser)
-        recreateConnectionForShareScreen(userSession, undefined);
+      }
     }
   }, [currentScreenId]);
 
@@ -237,35 +233,35 @@ export const MeetingProvider: React.FC = ({ children }) => {
         return userSession;
       });
       setUserSessions(newUserSessions);
-      connectToOtherUsersIfRequire(newUserSessions);
+      connectToOtherUsersIfRequire(newUserSessions.filter((x) => !x.isSelf));
+    });
+  };
+
+  const connectToOtherUserIfRequire = (otherUser: IUserSession) => {
+    otherUser.webRtcConnections?.forEach((connection) => {
+      if (
+        connection.connectionType === UserSessionWebRtcConnectionType.send &&
+        connection.connectionStatus ===
+          UserSessionWebRtcConnectionStatus.connected
+      ) {
+        const hasConnection =
+          userSessionConnectionManager.current.peerConnections.some(
+            (x) =>
+              x.userSessionId === otherUser.id &&
+              x.receiveWebRtcConnectionId === connection.id
+          );
+        if (!hasConnection) {
+          createPeerConnection(otherUser, undefined, connection.id);
+        }
+      }
     });
   };
 
   const connectToOtherUsersIfRequire = (otherUsers: IUserSession[]) => {
-    otherUsers
-      .filter((x) => !x.isSelf)
-      .map((otherUser) => {
-        const hasConnection =
-          userSessionConnectionManager.current.peerConnections.some(
-            (x) => x.userSessionId === otherUser.id
-          );
-        if (
-          otherUser.connectionStatus ===
-            UserSessionConnectionStatus.connected &&
-          !hasConnection
-        ) {
-          createPeerConnection(otherUser, false, undefined);
-        }
-        return otherUser;
-      });
-  };
-
-  const recreateConnectionForShareScreen = async (
-    userSession: IUserSession,
-    screenStream: MediaStream | undefined
-  ) => {
-    closeAndRemoveConnectionsFromUserSession(userSession);
-    await createPeerConnection(userSession, true, screenStream);
+    otherUsers.map((otherUser) => {
+      connectToOtherUserIfRequire(otherUser);
+      return otherUser;
+    });
   };
 
   const closeAndRemoveConnectionsFromUserSession = (
@@ -275,7 +271,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
       userSessionConnectionManager.current.peerConnections
         .map((connection) => {
           if (connection.userSessionId === userSession.id) {
-            connection.peerConnection.connection.close();
+            connection.peerConnection.close();
             return undefined;
           }
           return connection;
@@ -384,11 +380,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
     });
 
     serverConnection?.current?.on(
-      'OtherUserSessionConnectionStatusUpdated',
+      'OtherUserSessionWebRtcConnectionStatusUpdated',
       (otherUser: IUserSession) => {
         updateUserSession(otherUser);
-        removeAudiosAndVideosFromUserSession(otherUser);
-        closeAndRemoveConnectionsFromUserSession(otherUser);
+        connectToOtherUserIfRequire(otherUser);
       }
     );
 
@@ -402,26 +397,24 @@ export const MeetingProvider: React.FC = ({ children }) => {
     serverConnection?.current?.on(
       'ProcessAnswer',
       async (
-        connectionId: string,
-        answerSDP: string,
-        isSharingCamera: boolean,
-        isSharingScreen: boolean,
-        peerConnectionId: string
+        webRtcConnectionId,
+        peerConnectionId: string,
+        answerSDP: string
       ) => {
-        const isSelf = connectionId === serverConnection.current?.connectionId;
         const matchedPeerConnection =
           userSessionConnectionManager.current.peerConnections.find(
-            (x) => x.peerConnection.id === peerConnectionId
+            (x) => x.peerConnectionId === peerConnectionId
           );
-        matchedPeerConnection?.peerConnection.connection.setRemoteDescription(
-          new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
-        );
-        if (isSelf) {
-          const updateConnectionStatusCommand: UpdateConnectionStatusCommand = {
-            connectionId,
-            connectionStatus: UserSessionConnectionStatus.connected,
-          };
-          await api.meeting.updateConnectionStatus(
+        if (matchedPeerConnection) {
+          matchedPeerConnection.peerConnection.setRemoteDescription(
+            new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
+          );
+          const updateConnectionStatusCommand: UpdateUserSessionWebRtcConnectionStatusCommand =
+            {
+              userSessionWebRtcConnectionId: webRtcConnectionId,
+              connectionStatus: UserSessionWebRtcConnectionStatus.connected,
+            };
+          await api.meeting.updateUserSessionWebRtcConnectionStatus(
             updateConnectionStatusCommand
           );
         }
@@ -430,15 +423,13 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
     serverConnection?.current?.on(
       'AddCandidate',
-      (connectionId: string, candidate: string, peerConnectionId: string) => {
+      (peerConnectionId: string, candidate: string) => {
         const objCandidate = JSON.parse(candidate);
         const matchedPeerConnection =
           userSessionConnectionManager.current.peerConnections.find(
-            (x) => x.peerConnection.id === peerConnectionId
+            (x) => x.peerConnectionId === peerConnectionId
           );
-        matchedPeerConnection?.peerConnection.connection.addIceCandidate(
-          objCandidate
-        );
+        matchedPeerConnection?.peerConnection.addIceCandidate(objCandidate);
       }
     );
 
@@ -452,17 +443,19 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
   const createPeerConnection = async (
     userSession: IUserSession,
-    isSelf: boolean,
-    otherStreamToSend: MediaStream | undefined
+    otherStreamToSend: MediaStream | undefined,
+    receiveWebRtcConnectionId?: string
   ) => {
     const peerConnectionId = GUID();
     const peer = new RTCPeerConnection();
+
     peer.addEventListener('icecandidate', (candidate) => {
       serverConnection?.current?.invoke(
         'ProcessCandidateAsync',
-        userSession.connectionId,
+        userSession.id,
         peerConnectionId,
-        candidate
+        candidate,
+        receiveWebRtcConnectionId
       );
     });
     peer.addEventListener('track', (e: RTCTrackEvent) => {
@@ -481,14 +474,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
           }
         );
       } else if (e.track.kind === 'video') {
-        setUserSessions((oldUserSessions: IUserSession[]) => {
-          const changedUserSession = oldUserSessions.find(
-            (x) => x.connectionId === userSession.connectionId
-          );
-          if (changedUserSession)
-            changedUserSession.isSharingScreen = userSession.isSharingScreen;
-          return [...oldUserSessions];
-        });
         setUserSessionVideos(
           (oldUserSessionVideos: IUserSessionMediaStream[]) => [
             ...oldUserSessionVideos,
@@ -502,7 +487,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
       }
     });
 
-    if (isSelf) {
+    if (userSession.isSelf) {
       mediaStream.current?.getTracks().forEach((track: MediaStreamTrack) => {
         if (mediaStream.current) peer.addTrack(track, mediaStream.current);
       });
@@ -514,31 +499,28 @@ export const MeetingProvider: React.FC = ({ children }) => {
     }
 
     const offer = await peer.createOffer({
-      offerToReceiveAudio: !isSelf,
-      offerToReceiveVideo: !isSelf,
+      offerToReceiveAudio: !userSession.isSelf,
+      offerToReceiveVideo: !userSession.isSelf,
     });
 
     await peer.setLocalDescription(offer);
 
     const peerConnection: IUserRTCPeerConnection = {
-      isSelf,
+      isSelf: userSession.isSelf,
       userSessionId: userSession.id,
-      connectionId: userSession.connectionId,
-      peerConnection: {
-        id: peerConnectionId,
-        connection: peer,
-      },
+      peerConnectionId,
+      peerConnection: peer,
+      receiveWebRtcConnectionId,
     };
 
     userSessionConnectionManager.current.peerConnections.push(peerConnection);
 
     await serverConnection?.current?.invoke(
       'ProcessOfferAsync',
-      userSession.connectionId,
+      userSession.id,
+      peerConnectionId,
       offer.sdp,
-      userSession.isSharingCamera,
-      userSession.isSharingScreen,
-      peerConnectionId
+      receiveWebRtcConnectionId
     );
   };
 

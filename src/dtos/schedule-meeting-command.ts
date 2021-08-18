@@ -1,14 +1,17 @@
-import { Guid } from 'guid-typescript';
-
 export enum MeetingType {
   adHoc,
   schedule,
 }
 
-export enum UserSessionConnectionStatus {
+export enum UserSessionWebRtcConnectionStatus {
   connecting,
   connected,
   disconnected,
+}
+
+export enum UserSessionWebRtcConnectionType {
+  send,
+  receive,
 }
 
 export interface ScheduleMeetingCommand {
@@ -26,9 +29,9 @@ export interface ChangeAudioCommand {
   isMuted: boolean;
 }
 
-export interface UpdateStatusCommand {
-  connectionId: string;
-  connectionStatus: UserSessionConnectionStatus;
+export interface UpdateUserSessionWebRtcConnectionStatusCommand {
+  userSessionWebRtcConnectionId: string;
+  connectionStatus: UserSessionWebRtcConnectionStatus;
 }
 
 export interface MeetingDto {
@@ -46,6 +49,15 @@ export interface MeetingSession {
   userSessions: IUserSession[];
 }
 
+export interface UserSessionWebRtcConnection {
+  id: string;
+  userSessionId: string;
+  webRtcPeerConnectionId: string;
+  receiveWebRtcConnectionId?: string;
+  connectionType: UserSessionWebRtcConnectionType;
+  connectionStatus: UserSessionWebRtcConnectionStatus;
+}
+
 export interface IUserSession {
   id: string;
   connectionId: string;
@@ -55,7 +67,7 @@ export interface IUserSession {
   isMuted: boolean;
   isSharingScreen: boolean;
   isSharingCamera: boolean;
-  connectionStatus: UserSessionConnectionStatus;
+  webRtcConnections: UserSessionWebRtcConnection[];
 }
 
 export interface IUserSessionMediaStream {
@@ -71,11 +83,7 @@ export interface IUserSessionConnectionManager {
 export interface IUserRTCPeerConnection {
   isSelf: boolean;
   userSessionId: string;
-  connectionId: string;
-  peerConnection: IRTCPeerConnectionWrapper;
-}
-
-export interface IRTCPeerConnectionWrapper {
-  id: string;
-  connection: RTCPeerConnection;
+  peerConnectionId: string;
+  peerConnection: RTCPeerConnection;
+  receiveWebRtcConnectionId?: string;
 }
