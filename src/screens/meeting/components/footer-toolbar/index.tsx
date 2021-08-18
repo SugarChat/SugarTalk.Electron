@@ -41,11 +41,18 @@ export const FooterToolbar = React.memo(() => {
     currentScreenId,
     isSharingVideo,
     isSelectingScreen,
+    userSessions,
     setIsMuted,
     setCurrentScreenId,
     setIsSelectingScreen,
     setIsSharingVideo,
   } = React.useContext(MeetingContext);
+
+  const otherUserSharingScreen = userSessions.some(
+    (x) => x.isSharingScreen && !x.isSelf
+  );
+
+  const isSharingScreen = userSessions.find((x) => x.isSelf)?.isSharingScreen;
 
   React.useEffect(() => {
     const onShareScreenSelected = (_e: unknown, screenId: string) => {
@@ -124,11 +131,11 @@ export const FooterToolbar = React.memo(() => {
           </Grid>
           <Grid item>
             <ToolbarButton
-              disabled={isSelectingScreen}
+              disabled={isSelectingScreen || otherUserSharingScreen}
               onClick={onShareScreen}
-              text={currentScreenId === '' ? '共享屏幕' : '停止共享屏幕'}
+              text={!isSharingScreen ? '共享屏幕' : '停止共享屏幕'}
               icon={
-                currentScreenId ? <StopScreenShareIcon /> : <ScreenShareIcon />
+                isSharingScreen ? <StopScreenShareIcon /> : <ScreenShareIcon />
               }
             />
           </Grid>
