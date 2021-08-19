@@ -8,27 +8,27 @@ export const root: CSSProperties = {
 
 export const webRTCContainer: CSSProperties = {
   height: '90%',
-  overflow: 'auto',
-  padding: '10px',
+  overflow: 'hidden',
+  paddingBottom: '10px',
   textAlign: 'center',
 };
 
 export const sharingRootContainer: CSSProperties = {
-  height: '90%',
+  height: '100%',
+  marginBottom: '10px',
   padding: '5px',
   display: 'flex',
-  flexDirection: 'row',
+  justifyContent: 'space-between',
 };
 
 export const sharingContainer: CSSProperties = {
-  padding: '5px',
-  display: 'flex',
-  flex: 9,
+  width: '100%',
 };
 
 export const verticalUserListContainer: CSSProperties = {
+  overflow: 'auto',
   padding: '5px',
+  marginBottom: '10px',
   display: 'flex',
   textAlign: 'center',
-  flex: 1,
 };

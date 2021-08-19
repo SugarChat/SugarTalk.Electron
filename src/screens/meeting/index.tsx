@@ -31,7 +31,12 @@ const MeetingScreen: React.FC = React.memo(() => {
           </Box>
         )}
         {!isSomeoneElseSharingScreen && (
-          <Box style={styles.sharingRootContainer}>
+          <Box
+            style={{
+              ...styles.verticalUserListContainer,
+              height: '100%',
+            }}
+          >
             <VerticalUserList />
           </Box>
         )}

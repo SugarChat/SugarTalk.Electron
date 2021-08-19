@@ -1,4 +1,5 @@
 import { CSSProperties } from 'react';
+
 export const root: CSSProperties = {
   padding: 0,
   height: '100%',
@@ -6,6 +7,8 @@ export const root: CSSProperties = {
 };
 
 export const listItem: CSSProperties = {
+  overflow: 'auto',
+  display: 'flex',
   justifyContent: 'center',
 };
 
