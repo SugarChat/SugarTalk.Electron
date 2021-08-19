@@ -233,7 +233,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
             chromeMediaSource: 'desktop',
             chromeMediaSourceId: currentScreenId,
           },
-          optional: [{ minFrameRate: 30 }, { aspectRatio: 16 / 9 }],
+          optional: [{ minFrameRate: 120 }, { aspectRatio: 16 / 9 }],
         };
         navigator.mediaDevices
           .getUserMedia({
@@ -241,13 +241,14 @@ export const MeetingProvider: React.FC = ({ children }) => {
             audio: false,
           })
           .then(async (screenStream) => {
-            screenStream.getVideoTracks().forEach((x) =>
+            screenStream.getVideoTracks().forEach((x) => {
+              x.contentHint = 'detail';
               x.applyConstraints({
-                width: { exact: 1280 },
-                height: { max: 1080 },
-                frameRate: { min: 30, ideal: 45, max: 45 },
-              })
-            );
+                width: { min: 640, ideal: 1920, max: 1920 },
+                height: { min: 400, ideal: 1080 },
+                frameRate: { min: 120, ideal: 120, max: 120 },
+              });
+            });
             shareScreenCommand.isShared = true;
             shareScreen(shareScreenCommand);
             createPeerConnection(
