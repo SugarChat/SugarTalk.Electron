@@ -32,3 +32,9 @@ export const verticalUserListContainer: CSSProperties = {
   display: 'flex',
   textAlign: 'center',
 };
+
+export const horizontalUserListContainer: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'center',
+  height: '100%',
+};

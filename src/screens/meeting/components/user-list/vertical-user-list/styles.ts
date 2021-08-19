@@ -7,8 +7,6 @@ export const root: CSSProperties = {
 };
 
 export const listItem: CSSProperties = {
-  overflow: 'auto',
-  display: 'flex',
   justifyContent: 'center',
 };
 

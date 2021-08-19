@@ -3,18 +3,17 @@ import MicOffIcon from '@material-ui/icons/MicOff';
 import { green } from '@material-ui/core/colors';
 import { Avatar, Box, List, ListItem } from '@material-ui/core';
 import React, { useMemo } from 'react';
-import { MeetingContext } from '../../context';
-
 import * as styles from './styles';
+import { MeetingContext } from '../../../context';
 
-export const VerticalUserList = () => {
+export const HorizontalUserList = () => {
   const { userSessions } = React.useContext(MeetingContext);
   return useMemo(() => {
     return (
-      <List component="div" style={styles.root}>
+      <List component="div" style={styles.listRoot}>
         {userSessions.map((userSession, key) => {
           return (
-            <ListItem key={key} style={styles.listItem}>
+            <ListItem key={key.toString()} style={styles.listItem}>
               <Box component="div" style={styles.userContainer}>
                 <Avatar src={userSession.userPicture} style={styles.avatar} />
                 <Box component="div" style={styles.userNameContainer}>

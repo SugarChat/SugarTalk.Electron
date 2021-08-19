@@ -5,8 +5,9 @@ import { StatusBar } from './components/status-bar';
 import * as styles from './styles';
 import { FooterToolbar } from './components/footer-toolbar';
 import { MeetingContext, MeetingProvider } from './context';
-import { VerticalUserList } from './components/vertical-user-list';
 import { ScreenSharing } from './components/screen-sharing';
+import { VerticalUserList } from './components/user-list/vertical-user-list';
+import { HorizontalUserList } from './components/user-list/horizontal-user-list';
 
 const MeetingScreen: React.FC = React.memo(() => {
   const { userSessions, userSessionAudios } = React.useContext(MeetingContext);
@@ -31,13 +32,8 @@ const MeetingScreen: React.FC = React.memo(() => {
           </Box>
         )}
         {!isSomeoneElseSharingScreen && (
-          <Box
-            style={{
-              ...styles.verticalUserListContainer,
-              height: '100%',
-            }}
-          >
-            <VerticalUserList />
+          <Box style={styles.horizontalUserListContainer}>
+            <HorizontalUserList />
           </Box>
         )}
       </Box>
