@@ -1,4 +1,4 @@
-import { ThirdPartyFrom } from '../screens/login/type';
+import { ThirdPartyFrom, IUserInfo } from '../screens/login/type';
 
 export type IActionType = 'UpdateIdToken' | 'UpdateUserInfo' | 'UpdateMeetings';
 
@@ -10,14 +10,7 @@ export interface IRootStoreAction {
 export interface IRootStore {
   userStore: {
     idToken: string;
-    userInfo: {
-      id: string;
-      name: string;
-      avatar: string;
-      email: string;
-      thirdPartyFrom: ThirdPartyFrom;
-      thirdPartyId: string;
-    };
+    userInfo: IUserInfo;
   };
   mettingStore: { historyMeetings: [] };
   dispatch: React.Dispatch<IRootStoreAction>;
@@ -28,8 +21,8 @@ export const BaseStoreInstance: IRootStore = {
     idToken: '',
     userInfo: {
       id: '',
-      name: '',
-      avatar: '',
+      displayName: '',
+      picture: '',
       email: '',
       thirdPartyFrom: ThirdPartyFrom.google,
       thirdPartyId: '',
