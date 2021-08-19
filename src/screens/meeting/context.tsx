@@ -271,7 +271,9 @@ export const MeetingProvider: React.FC = ({ children }) => {
         userSession.isSelf = userSession.connectionId === connectionId;
         return userSession;
       });
-      setUserSessions(newUserSessions);
+      if (JSON.stringify(userSessions) !== JSON.stringify(newUserSessions)) {
+        setUserSessions(newUserSessions);
+      }
       connectToOtherUsersIfRequire(newUserSessions.filter((x) => !x.isSelf));
     });
   };
