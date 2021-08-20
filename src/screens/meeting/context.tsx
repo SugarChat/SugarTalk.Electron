@@ -49,6 +49,7 @@ interface IMeetingContext {
     | React.MutableRefObject<HubConnection | undefined>
     | undefined;
   meetingNumber: string;
+  screenStream: MediaStream | undefined;
   userSessions: IUserSession[];
   userSessionAudios: IUserSessionMediaStream[];
   userSessionVideos: IUserSessionMediaStream[];
@@ -65,6 +66,7 @@ export const MeetingContext = React.createContext<IMeetingContext>({
   setIsSelectingScreen: () => {},
   serverConnection: undefined,
   meetingNumber: '',
+  screenStream: undefined,
   userSessions: [],
   userSessionAudios: [],
   userSessionVideos: [],
@@ -94,6 +96,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const [meetingParam, setMeetingParam] =
     React.useState<IMeetingQueryStringParams>();
   const mediaStream = React.useRef<MediaStream>();
+  const [screenStream, setScreenStream] = React.useState<MediaStream>();
   const [mediaStreamInitialized, setMediaStreamInitialized] =
     React.useState<boolean>(false);
   const serverConnection = React.useRef<HubConnection>();
@@ -240,8 +243,8 @@ export const MeetingProvider: React.FC = ({ children }) => {
             video: videoConstraints,
             audio: false,
           })
-          .then(async (screenStream) => {
-            screenStream.getVideoTracks().forEach((x) => {
+          .then(async (gotStream) => {
+            gotStream.getVideoTracks().forEach((x) => {
               x.contentHint = 'detail';
               x.applyConstraints({
                 width: { min: 640, ideal: 1920, max: 1920 },
@@ -253,7 +256,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
             shareScreen(shareScreenCommand);
             createPeerConnection(
               selfUserSession,
-              screenStream,
+              gotStream,
               UserSessionWebRtcConnectionMediaType.screen
             );
           });
@@ -552,13 +555,17 @@ export const MeetingProvider: React.FC = ({ children }) => {
           }
         );
       } else if (e.track.kind === 'video') {
-        setUserSessionVideos(() => [
-          {
-            userSessionId: userSession.id,
-            connectionId: userSession.connectionId,
-            stream,
-          },
-        ]);
+        if (mediaType === UserSessionWebRtcConnectionMediaType.screen) {
+          setScreenStream(stream);
+        } else {
+          setUserSessionVideos(() => [
+            {
+              userSessionId: userSession.id,
+              connectionId: userSession.connectionId,
+              stream,
+            },
+          ]);
+        }
       }
     });
 
@@ -612,6 +619,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
         isSelectingScreen,
         setIsSelectingScreen,
         userSessionVideos,
+        screenStream,
       }}
     >
       {children && children}
