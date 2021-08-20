@@ -7,23 +7,33 @@ import { MeetingContext } from '../../context';
 
 import * as styles from './styles';
 
-export const VerticalUserList = () => {
+interface UserLitsProps {
+  isSharing?: boolean;
+}
+
+export const VerticalUserList: React.FC<UserLitsProps> = ({ isSharing }) => {
   const { userSessions } = React.useContext(MeetingContext);
   return useMemo(() => {
     return (
-      <List component="div" style={styles.root}>
+      <List component="div" style={styles.root(isSharing || false)}>
         {userSessions.map((userSession, key) => {
           return (
-            <ListItem key={key} style={styles.listItem}>
+            <ListItem key={key} style={styles.listItem(isSharing || false)}>
               <Box component="div" style={styles.userContainer}>
                 <Avatar src={userSession.userPicture} style={styles.avatar} />
-                <Box component="div" style={styles.userNameContainer}>
-                  <Box component="p">{userSession.userName}</Box>
+                <Box
+                  component="div"
+                  style={styles.userNameContainer(isSharing || false)}
+                >
                   {!userSession.isMuted ? (
                     <MicIcon fontSize="small" style={{ color: green[500] }} />
                   ) : (
-                    <MicOffIcon fontSize="small" color="disabled" />
+                    <MicOffIcon
+                      fontSize="small"
+                      style={{ color: isSharing ? '#fff' : 'gray' }}
+                    />
                   )}
+                  <Box component="p">{userSession.userName}</Box>
                 </Box>
               </Box>
             </ListItem>

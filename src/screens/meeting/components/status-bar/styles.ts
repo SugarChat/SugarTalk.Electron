@@ -1,7 +1,7 @@
 import { CSSProperties } from 'react';
 
 export const statusBarContainer: CSSProperties = {
-  backgroundColor: '#f8f9fb',
+  backgroundColor: '#fff',
   border: '1px solid #e5e5e5',
   boxSizing: 'border-box',
   padding: '3px 10px',

@@ -1,16 +1,37 @@
 import { CSSProperties } from 'react';
 
+export const screenWidth = window.document;
+
 export const root: CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
   padding: 0,
   backgroundColor: '#fafafa',
   height: '100%',
 };
 
-export const webRTCContainer: CSSProperties = {
-  height: '90%',
-  overflow: 'hidden',
-  paddingBottom: '10px',
-  textAlign: 'center',
+export const webRTCContainer = (isSharing: boolean) => {
+  if (!isSharing) {
+    return {
+      width: '100%',
+      flex: '1',
+      overflow: 'hidden',
+      textAlign: 'center',
+      display: 'flex',
+      flexDirection: 'row',
+      justifyContent: 'center',
+      backgroundColor: '#fff',
+    } as CSSProperties;
+  }
+  return {
+    flex: '1',
+    width: '100%',
+    overflow: 'hidden',
+    textAlign: 'center',
+    display: 'flex',
+    flexDirection: 'row',
+  } as CSSProperties;
 };
 
 export const sharingRootContainer: CSSProperties = {
@@ -22,13 +43,5 @@ export const sharingRootContainer: CSSProperties = {
 };
 
 export const sharingContainer: CSSProperties = {
-  width: '100%',
-};
-
-export const verticalUserListContainer: CSSProperties = {
-  overflow: 'auto',
-  padding: '5px',
-  marginBottom: '10px',
-  display: 'flex',
-  textAlign: 'center',
+  flex: '1',
 };

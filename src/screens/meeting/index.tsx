@@ -7,39 +7,35 @@ import { FooterToolbar } from './components/footer-toolbar';
 import { MeetingContext, MeetingProvider } from './context';
 import { VerticalUserList } from './components/vertical-user-list';
 import { ScreenSharing } from './components/screen-sharing';
+import { useMemo } from 'react';
 
 const MeetingScreen: React.FC = React.memo(() => {
   const { userSessions, userSessionAudios } = React.useContext(MeetingContext);
+
+  const { screenStream } = React.useContext(MeetingContext);
 
   const isSomeoneElseSharingScreen = userSessions.some(
     (x) => x.isSharingScreen && !x.isSelf
   );
 
+  const isSharing = useMemo(() => {
+    return screenStream && isSomeoneElseSharingScreen;
+  }, [screenStream, isSomeoneElseSharingScreen]);
+
+  const renderSaringMetting = useMemo(() => {
+    if (!screenStream || !isSomeoneElseSharingScreen) return null;
+    return <ScreenSharing />;
+  }, [screenStream, isSomeoneElseSharingScreen]);
+
   return (
     <PageScreen style={styles.root}>
       <StatusBar />
 
-      <Box style={styles.webRTCContainer}>
-        {isSomeoneElseSharingScreen && (
-          <Box style={styles.sharingRootContainer}>
-            <Box style={styles.sharingContainer}>
-              <ScreenSharing />
-            </Box>
-            <Box style={styles.verticalUserListContainer}>
-              <VerticalUserList />
-            </Box>
-          </Box>
-        )}
-        {!isSomeoneElseSharingScreen && (
-          <Box
-            style={{
-              ...styles.verticalUserListContainer,
-              height: '100%',
-            }}
-          >
-            <VerticalUserList />
-          </Box>
-        )}
+      <Box style={styles.webRTCContainer(isSharing || false)}>
+        <>
+          {renderSaringMetting}
+          <VerticalUserList isSharing={isSharing} />
+        </>
       </Box>
       {userSessionAudios?.map((userSessionAudio, key) => {
         return (
