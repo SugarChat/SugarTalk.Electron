@@ -1,5 +1,6 @@
 import MicIcon from '@material-ui/icons/Mic';
 import MicOffIcon from '@material-ui/icons/MicOff';
+import ScreenShareIcon from '@material-ui/icons/ScreenShare';
 import { green } from '@material-ui/core/colors';
 import { Avatar, Box, List, ListItem } from '@material-ui/core';
 import React, { useMemo } from 'react';
@@ -25,6 +26,9 @@ export const VerticalUserList: React.FC<UserLitsProps> = ({ isSharing }) => {
                   component="div"
                   style={styles.userNameContainer(isSharing || false)}
                 >
+                  {userSession.isSharingScreen && (
+                    <ScreenShareIcon fontSize="small" />
+                  )}
                   {!userSession.isMuted ? (
                     <MicIcon fontSize="small" style={{ color: green[500] }} />
                   ) : (
