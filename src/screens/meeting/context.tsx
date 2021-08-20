@@ -367,8 +367,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const removeUserSession = (userSession: IUserSession) => {
     setUserSessions((oldUserSessions: IUserSession[]) =>
       oldUserSessions.filter(
-        (oldUserSession: IUserSession) =>
-          oldUserSession.connectionId !== userSession.connectionId
+        (oldUserSession: IUserSession) => oldUserSession.id !== userSession.id
       )
     );
     removeAudiosAndVideosFromUserSession(userSession);
