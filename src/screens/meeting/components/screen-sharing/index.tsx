@@ -3,26 +3,20 @@ import React, { useMemo } from 'react';
 import { MeetingContext } from '../../context';
 
 export const ScreenSharing = () => {
-  const { userSessionVideos } = React.useContext(MeetingContext);
+  const { screenStream } = React.useContext(MeetingContext);
   return useMemo(() => {
     return (
       <Box style={{ height: '100%' }}>
-        {userSessionVideos?.map((userSessionVideo, key) => {
-          return (
-            <Box key={key.toString()} style={{ height: '100%' }}>
-              {userSessionVideo.stream && (
-                <video
-                  style={{ height: '100%' }}
-                  ref={(video) => {
-                    if (video) video.srcObject = userSessionVideo.stream;
-                  }}
-                  autoPlay
-                />
-              )}
-            </Box>
-          );
-        })}
+        {screenStream && (
+          <video
+            style={{ height: '100%' }}
+            ref={(video) => {
+              if (video) video.srcObject = screenStream;
+            }}
+            autoPlay
+          />
+        )}
       </Box>
     );
-  }, [userSessionVideos]);
+  }, [screenStream]);
 };
