@@ -14,7 +14,10 @@ export const listItem: CSSProperties = {
 
 export const userContainer: CSSProperties = {
   margin: '5px',
-  display: 'inline-block',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
 };
 
 export const userNameContainer: CSSProperties = {
