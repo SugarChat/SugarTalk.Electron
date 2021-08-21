@@ -485,30 +485,33 @@ export const MeetingProvider: React.FC = ({ children }) => {
             (x) => x.peerConnectionId === peerConnectionId
           );
         if (matchedPeerConnection) {
+          console.log('set remote');
           matchedPeerConnection.peerConnection.setRemoteDescription(
-            new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
+            new RTCSessionDescription({ type: 'offer', sdp: answerSDP })
           );
-          const updateConnectionStatusCommand: UpdateUserSessionWebRtcConnectionStatusCommand =
-            {
-              userSessionWebRtcConnectionId: webRtcConnectionId,
-              connectionStatus: UserSessionWebRtcConnectionStatus.connected,
-            };
-          await api.meeting.updateUserSessionWebRtcConnectionStatus(
-            updateConnectionStatusCommand
-          );
+          // const updateConnectionStatusCommand: UpdateUserSessionWebRtcConnectionStatusCommand =
+          //   {
+          //     userSessionWebRtcConnectionId: webRtcConnectionId,
+          //     connectionStatus: UserSessionWebRtcConnectionStatus.connected,
+          //   };
+          // await api.meeting.updateUserSessionWebRtcConnectionStatus(
+          //   updateConnectionStatusCommand
+          // );
         }
       }
     );
 
     serverConnection?.current?.on(
       'AddCandidate',
-      (peerConnectionId: string, candidate: string) => {
-        const objCandidate = JSON.parse(candidate);
+      (peerConnectionId: string, candidate: RTCIceCandidate) => {
+        console.log(candidate);
+        //const objCandidate = JSON.parse(candidate);
         const matchedPeerConnection =
           userSessionConnectionManager.current.peerConnections.find(
             (x) => x.peerConnectionId === peerConnectionId
           );
-        matchedPeerConnection?.peerConnection.addIceCandidate(objCandidate);
+        console.log(matchedPeerConnection);
+        matchedPeerConnection?.peerConnection.addIceCandidate(candidate);
       }
     );
 
@@ -529,17 +532,15 @@ export const MeetingProvider: React.FC = ({ children }) => {
     const peerConnectionId = GUID();
     const peer = new RTCPeerConnection();
 
-    peer.addEventListener('icecandidate', (candidate) => {
+    peer.addEventListener('icecandidate', (e) => {
       serverConnection?.current?.invoke(
         'ProcessCandidateAsync',
-        userSession.id,
         peerConnectionId,
-        candidate,
-        mediaType,
-        receiveWebRtcConnectionId
+        e.candidate
       );
     });
     peer.addEventListener('track', (e: RTCTrackEvent) => {
+      console.log('track', e);
       const stream = e.streams[0];
       if (e.track.kind === 'audio') {
         setUserSessionAudios(
