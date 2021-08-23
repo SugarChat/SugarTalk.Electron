@@ -14,12 +14,6 @@ export enum UserSessionWebRtcConnectionType {
   receive,
 }
 
-export enum UserSessionWebRtcConnectionMediaType {
-  audio,
-  video,
-  screen,
-}
-
 export interface ScheduleMeetingCommand {
   id: string;
   meetingType: MeetingType;
@@ -69,7 +63,7 @@ export interface UserSessionWebRtcConnection {
   userSessionId: string;
   webRtcPeerConnectionId: string;
   receiveWebRtcConnectionId?: string;
-  mediaType: UserSessionWebRtcConnectionMediaType;
+  mediaType: MediaType;
   connectionType: UserSessionWebRtcConnectionType;
   connectionStatus: UserSessionWebRtcConnectionStatus;
 }
@@ -100,12 +94,18 @@ export interface IUserRTCPeerConnection {
   userSessionId: string;
   peerConnectionId: string;
   peerConnection: RTCPeerConnection;
+  peerConnectionType: IUserRTCPeerConnectionType;
+  peerConnectionMediaType: IUserRTCPeerConnectionMediaType;
   relatedPeerConnectionId?: string;
-  type: IUserRTCPeerConnectionType;
-  mediaType: UserSessionWebRtcConnectionMediaType;
 }
 
 export enum IUserRTCPeerConnectionType {
   offer,
   answer,
+}
+
+export enum IUserRTCPeerConnectionMediaType {
+  audio,
+  video,
+  screen,
 }
