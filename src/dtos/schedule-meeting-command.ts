@@ -97,10 +97,15 @@ export interface IUserSessionConnectionManager {
 }
 
 export interface IUserRTCPeerConnection {
-  isSelf: boolean;
   userSessionId: string;
   peerConnectionId: string;
   peerConnection: RTCPeerConnection;
-  receiveWebRtcConnectionId?: string;
+  relatedPeerConnectionId?: string;
+  type: IUserRTCPeerConnectionType;
   mediaType: UserSessionWebRtcConnectionMediaType;
+}
+
+export enum IUserRTCPeerConnectionType {
+  offer,
+  answer,
 }
