@@ -588,8 +588,21 @@ export const MeetingProvider: React.FC = ({ children }) => {
     streamToSend: MediaStream | undefined,
     mediaType: UserSessionWebRtcConnectionMediaType
   ) => {
+    const configuration: RTCConfiguration = {
+      iceServers: [
+        {
+          urls: 'turn:54.241.145.83',
+          username: 'kurento',
+          credential: 'YamimealTurn',
+          credentialType: 'password',
+        },
+        {
+          urls: ['stun:54.241.145.83'],
+        },
+      ],
+    };
     const peerConnectionId = GUID();
-    const peerConnection = new RTCPeerConnection();
+    const peerConnection = new RTCPeerConnection(configuration);
     const peerConnectionType = IUserRTCPeerConnectionType.offer;
 
     bindPeerConnectionEventListener(
@@ -636,8 +649,21 @@ export const MeetingProvider: React.FC = ({ children }) => {
     offerPeerConnectionId: string,
     offer: RTCSessionDescriptionInit
   ) => {
+    const configuration: RTCConfiguration = {
+      iceServers: [
+        {
+          urls: 'turn:54.241.145.83',
+          username: 'kurento',
+          credential: 'YamimealTurn',
+          credentialType: 'password',
+        },
+        {
+          urls: ['stun:54.241.145.83'],
+        },
+      ],
+    };
     const peerConnectionId = GUID();
-    const peerConnection = new RTCPeerConnection();
+    const peerConnection = new RTCPeerConnection(configuration);
     const peerConnectionType = IUserRTCPeerConnectionType.answer;
 
     bindPeerConnectionEventListener(
