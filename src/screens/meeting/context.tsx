@@ -555,19 +555,15 @@ export const MeetingProvider: React.FC = ({ children }) => {
           userSessionConnectionManager.current.peerConnections.find(
             (x) => x.relatedPeerConnectionId === peerConnectionId
           );
+
         if (matchedPeerConnection) {
-          console.log(
-            'OtherCandidateCreated connection found',
-            matchedPeerConnection
-          );
-          await matchedPeerConnection.peerConnection.addIceCandidate(
-            JSON.parse(candidateToJson)
-          );
+          const candidate = JSON.parse(candidateToJson);
+          if (candidate) {
+            await matchedPeerConnection.peerConnection.addIceCandidate(
+              candidate
+            );
+          }
         } else {
-          console.log(
-            'OtherCandidateCreated connection not found',
-            matchedPeerConnection
-          );
           await serverConnection?.current?.invoke(
             'ConnectionNotFoundWhenOtherIceSent',
             selfUserSession.current,
