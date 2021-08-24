@@ -588,13 +588,12 @@ export const MeetingProvider: React.FC = ({ children }) => {
       'OtherConnectionsClosed',
       async (peerConnectionIds: string[]) => {
         const matchedPeerConnections =
-          userSessionConnectionManager.current.peerConnections.filter(
-            (x) =>
-              !peerConnectionIds.find(
-                (peerConnectionId) =>
-                  x.peerConnectionId === peerConnectionId ||
-                  x.relatedPeerConnectionId === peerConnectionId
-              )
+          userSessionConnectionManager.current.peerConnections.filter((x) =>
+            peerConnectionIds.find(
+              (peerConnectionId) =>
+                x.peerConnectionId === peerConnectionId ||
+                x.relatedPeerConnectionId === peerConnectionId
+            )
           );
         await closeAndRemoveConnections(matchedPeerConnections, false);
       }
