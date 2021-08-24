@@ -11,20 +11,18 @@ import { ScreenSharing } from './components/screen-sharing';
 const MeetingScreen: React.FC = React.memo(() => {
   const { userSessions, userSessionAudios } = React.useContext(MeetingContext);
 
-  const { otherScreenSharedStream } = React.useContext(MeetingContext);
-
   const isSomeoneElseSharingScreen = userSessions.some(
     (x) => x.isSharingScreen && !x.isSelf
   );
 
   const isSharing = useMemo(() => {
-    return otherScreenSharedStream && isSomeoneElseSharingScreen;
-  }, [otherScreenSharedStream, isSomeoneElseSharingScreen]);
+    return isSomeoneElseSharingScreen;
+  }, [isSomeoneElseSharingScreen]);
 
   const renderSaringMetting = useMemo(() => {
-    if (!otherScreenSharedStream || !isSomeoneElseSharingScreen) return null;
+    if (!isSomeoneElseSharingScreen) return null;
     return <ScreenSharing />;
-  }, [otherScreenSharedStream, isSomeoneElseSharingScreen]);
+  }, [, isSomeoneElseSharingScreen]);
 
   return (
     <PageScreen style={styles.root}>
