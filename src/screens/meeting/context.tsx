@@ -151,7 +151,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
       const getIceServers = async () => {
         await api.meeting.getIceServers().then((response) => {
           iceServers.current = response;
-          console.log(iceServers.current);
         });
       };
 
@@ -628,6 +627,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
     // Prevent send or receive accour exception
     if (!sendFromUserSession.connectionId || !sendToUserSession.connectionId)
       return;
+    console.log(iceServers.current);
     const peerConnectionId = GUID();
     const peerConnection = new RTCPeerConnection({
       iceServers: iceServers.current,
