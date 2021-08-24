@@ -186,8 +186,8 @@ export const MeetingProvider: React.FC = ({ children }) => {
     }
   }, [otherUsersAdded]);
 
-  useInterval(() => {
-    syncMeeting();
+  useInterval(async () => {
+    await syncMeeting();
   }, 5000);
 
   React.useEffect(() => {
@@ -253,54 +253,62 @@ export const MeetingProvider: React.FC = ({ children }) => {
             });
             screenStream.current = gotStream;
             shareScreenCommand.isShared = true;
-            shareScreen(shareScreenCommand);
-            connectToOtherUsersIfRequire(userSessions.filter((x) => !x.isSelf));
+            await shareScreen(shareScreenCommand);
+            await connectToOtherUsersIfRequire(
+              userSessions.filter((x) => !x.isSelf)
+            );
           });
       }
     }
   }, [currentScreenId]);
 
-  const syncMeeting = () => {
+  const syncMeeting = async () => {
     const getMeetingSessionRequest: GetMeetingSessionRequest = {
       meetingNumber,
     };
-    api.meeting.getMeetingSession(getMeetingSessionRequest).then((response) => {
-      const connectionId = serverConnection.current?.connectionId;
-      const newUserSessions = response.data.userSessions.map((userSession) => {
-        userSession.isSelf = userSession.connectionId === connectionId;
-        return userSession;
+    api.meeting
+      .getMeetingSession(getMeetingSessionRequest)
+      .then(async (response) => {
+        const connectionId = serverConnection.current?.connectionId;
+        const newUserSessions = response.data.userSessions.map(
+          (userSession) => {
+            userSession.isSelf = userSession.connectionId === connectionId;
+            return userSession;
+          }
+        );
+        if (JSON.stringify(userSessions) !== JSON.stringify(newUserSessions)) {
+          setUserSessions(newUserSessions);
+          selfUserSession.current = newUserSessions.find((x) => x.isSelf);
+        }
+        await connectToOtherUsersIfRequire(
+          newUserSessions.filter((x) => !x.isSelf)
+        );
       });
-      if (JSON.stringify(userSessions) !== JSON.stringify(newUserSessions)) {
-        setUserSessions(newUserSessions);
-        selfUserSession.current = newUserSessions.find((x) => x.isSelf);
-      }
-      connectToOtherUsersIfRequire(
-        newUserSessions.filter((x) => !x.isSelf && x.connectionId)
-      );
-    });
   };
 
-  const connectToOtherUsersIfRequire = (otherUsers: IUserSession[]) => {
-    otherUsers.map((otherUser) => {
-      connectToOtherUserIfRequire(otherUser);
+  const connectToOtherUsersIfRequire = async (otherUsers: IUserSession[]) => {
+    otherUsers.map(async (otherUser) => {
+      await connectToOtherUserIfRequire(otherUser);
       return otherUser;
     });
   };
 
-  const connectToOtherUserIfRequire = (otherUserSession: IUserSession) => {
-    sendStreamToOtherUserIfNotBuilt(
+  const connectToOtherUserIfRequire = async (
+    otherUserSession: IUserSession
+  ) => {
+    await sendStreamToOtherUserIfNotBuilt(
       otherUserSession,
       audioStream.current,
       IUserRTCPeerConnectionMediaType.audio
     );
-    sendStreamToOtherUserIfNotBuilt(
+    await sendStreamToOtherUserIfNotBuilt(
       otherUserSession,
       screenStream.current,
       IUserRTCPeerConnectionMediaType.screen
     );
   };
 
-  const sendStreamToOtherUserIfNotBuilt = (
+  const sendStreamToOtherUserIfNotBuilt = async (
     otherUserSession: IUserSession,
     currentStream: MediaStream | undefined,
     currentStreamType: IUserRTCPeerConnectionMediaType
@@ -314,7 +322,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
             x.peerConnectionType === IUserRTCPeerConnectionType.offer
         );
       if (!hasOfferTheStreamConnection && selfUserSession.current) {
-        createOfferPeerConnection(
+        await createOfferPeerConnection(
           selfUserSession.current,
           otherUserSession,
           currentStream,
@@ -424,12 +432,12 @@ export const MeetingProvider: React.FC = ({ children }) => {
     await closeAndRemoveConnectionsFromUserSession(userSession);
   };
 
-  const changeAudio = (userSessionId: string, muted: boolean) => {
+  const changeAudio = async (userSessionId: string, muted: boolean) => {
     const changeAudioCommand: ChangeAudioCommand = {
       userSessionId,
       isMuted: muted,
     };
-    api.meeting.changeAudio(changeAudioCommand);
+    await api.meeting.changeAudio(changeAudioCommand);
   };
 
   const connectSignalr = (userName: string, meetingId: string) => {
@@ -476,14 +484,14 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
     serverConnection?.current?.on(
       'OtherJoined',
-      (otherUserSession: IUserSession) => {
+      async (otherUserSession: IUserSession) => {
         otherUserSession.isSelf = false;
         setUserSessions((oldUserSessions: IUserSession[]) => {
           if (oldUserSessions.find((x) => x.id === otherUserSession.id))
             return oldUserSessions;
           return [...oldUserSessions, otherUserSession];
         });
-        connectToOtherUserIfRequire(otherUserSession);
+        await connectToOtherUserIfRequire(otherUserSession);
       }
     );
 
@@ -608,6 +616,9 @@ export const MeetingProvider: React.FC = ({ children }) => {
     streamToSend: MediaStream,
     mediaType: IUserRTCPeerConnectionMediaType
   ) => {
+    // Prevent send or receive accour exception
+    if (!sendFromUserSession.connectionId || !sendToUserSession.connectionId)
+      return;
     const configuration: RTCConfiguration = {
       iceServers: [
         {
