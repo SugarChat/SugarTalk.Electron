@@ -329,33 +329,36 @@ export const MeetingProvider: React.FC = ({ children }) => {
     }
   };
 
-  const closeAndRemoveConnection = (connection: IUserRTCPeerConnection) => {
-    if (connection) {
-      connection.peerConnection.close();
+  const closeAndRemoveConnections = async (
+    connections: IUserRTCPeerConnection[],
+    shouldNotify = true
+  ) => {
+    if (connections?.length) {
+      connections.forEach((connection) => connection.peerConnection.close());
       userSessionConnectionManager.current.peerConnections =
         userSessionConnectionManager.current.peerConnections.filter(
-          (x) => x.peerConnectionId !== connection.peerConnectionId
+          (x) =>
+            !connections.find((c) => c.peerConnectionId === x.peerConnectionId)
         );
+      if (shouldNotify) {
+        await serverConnection?.current?.invoke(
+          'ConnectionsClosed',
+          connections.map(({ peerConnectionId }) => peerConnectionId)
+        );
+      }
     }
   };
 
-  const closeAndRemoveConnections = (connections: IUserRTCPeerConnection[]) => {
-    connections.forEach((connection) => closeAndRemoveConnection(connection));
-  };
-
-  const closeAndRemoveConnectionsFromUserSession = (
-    userSession: IUserSession
+  const closeAndRemoveConnectionsFromUserSession = async (
+    userSession: IUserSession,
+    shouldNotify = false
   ) => {
-    userSessionConnectionManager.current.peerConnections =
-      userSessionConnectionManager.current.peerConnections
-        .map((connection) => {
-          if (connection.userSessionId === userSession.id) {
-            connection.peerConnection.close();
-            return undefined;
-          }
-          return connection;
-        })
-        .filter((x) => x !== undefined) as IUserRTCPeerConnection[];
+    await closeAndRemoveConnections(
+      userSessionConnectionManager.current.peerConnections.filter(
+        (x) => x.userSessionId === userSession.id
+      ),
+      shouldNotify
+    );
   };
 
   const removeMediasFromUserSession = (userSession: IUserSession) => {
@@ -416,14 +419,14 @@ export const MeetingProvider: React.FC = ({ children }) => {
       );
   };
 
-  const removeUserSession = (userSession: IUserSession) => {
+  const removeUserSession = async (userSession: IUserSession) => {
     setUserSessions((oldUserSessions: IUserSession[]) =>
       oldUserSessions.filter(
         (oldUserSession: IUserSession) => oldUserSession.id !== userSession.id
       )
     );
     removeMediasFromUserSession(userSession);
-    closeAndRemoveConnectionsFromUserSession(userSession);
+    await closeAndRemoveConnectionsFromUserSession(userSession);
   };
 
   const changeAudio = (userSessionId: string, muted: boolean) => {
@@ -489,9 +492,12 @@ export const MeetingProvider: React.FC = ({ children }) => {
       }
     );
 
-    serverConnection?.current?.on('OtherLeft', (otherUser: IUserSession) => {
-      removeUserSession(otherUser);
-    });
+    serverConnection?.current?.on(
+      'OtherLeft',
+      async (otherUser: IUserSession) => {
+        await removeUserSession(otherUser);
+      }
+    );
 
     serverConnection.current?.on(
       'OtherAudioChanged',
@@ -575,6 +581,22 @@ export const MeetingProvider: React.FC = ({ children }) => {
             candidateToJson
           );
         }
+      }
+    );
+
+    serverConnection?.current?.on(
+      'OtherConnectionsClosed',
+      async (peerConnectionIds: string[]) => {
+        const matchedPeerConnections =
+          userSessionConnectionManager.current.peerConnections.filter(
+            (x) =>
+              !peerConnectionIds.find(
+                (peerConnectionId) =>
+                  x.peerConnectionId === peerConnectionId ||
+                  x.relatedPeerConnectionId === peerConnectionId
+              )
+          );
+        await closeAndRemoveConnections(matchedPeerConnections, false);
       }
     );
 
@@ -717,7 +739,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
     });
     peer.addEventListener('track', (e: RTCTrackEvent) => {
       const stream = e.streams[0];
-      console.log('track', e);
       if (e.track.kind === 'audio') {
         setUserSessionAudios(
           (oldUserSessionAudios: IUserSessionMediaStream[]) => {
