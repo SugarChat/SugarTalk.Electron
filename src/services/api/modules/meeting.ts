@@ -65,4 +65,9 @@ export default {
 
     return response.data;
   },
+
+  getIceServers: async (): Promise<RTCIceServer[]> => {
+    const response = await api.get<RTCIceServer[]>(`/meeting/iceservers`);
+    return response.data;
+  },
 };

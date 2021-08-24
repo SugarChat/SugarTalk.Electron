@@ -104,6 +104,8 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const userSessionConnectionManager =
     React.useRef<IUserSessionConnectionManager>({ peerConnections: [] });
 
+  const iceServers = React.useRef<RTCIceServer[]>([]);
+
   const location = useLocation();
   const { userStore } = useStores();
 
@@ -146,8 +148,15 @@ export const MeetingProvider: React.FC = ({ children }) => {
           setMeetingJoined(true);
         });
       };
+      const getIceServers = async () => {
+        await api.meeting.getIceServers().then((response) => {
+          iceServers.current = response;
+          console.log(iceServers.current);
+        });
+      };
 
       joinTheMeeting();
+      getIceServers();
     }
   }, [meetingParam]);
 
@@ -619,21 +628,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
     // Prevent send or receive accour exception
     if (!sendFromUserSession.connectionId || !sendToUserSession.connectionId)
       return;
-    const configuration: RTCConfiguration = {
-      iceServers: [
-        {
-          urls: 'turn:54.241.145.83',
-          username: 'kurento',
-          credential: 'YamimealTurn',
-          credentialType: 'password',
-        },
-        {
-          urls: ['stun:54.241.145.83'],
-        },
-      ],
-    };
     const peerConnectionId = GUID();
-    const peerConnection = new RTCPeerConnection(configuration);
+    const peerConnection = new RTCPeerConnection({
+      iceServers: iceServers.current,
+    });
     const peerConnectionType = IUserRTCPeerConnectionType.offer;
 
     bindPeerConnectionEventListener(
@@ -679,21 +677,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
     offerPeerConnectionId: string,
     offer: RTCSessionDescriptionInit
   ) => {
-    const configuration: RTCConfiguration = {
-      iceServers: [
-        {
-          urls: 'turn:54.241.145.83',
-          username: 'kurento',
-          credential: 'YamimealTurn',
-          credentialType: 'password',
-        },
-        {
-          urls: ['stun:54.241.145.83'],
-        },
-      ],
-    };
     const peerConnectionId = GUID();
-    const peerConnection = new RTCPeerConnection(configuration);
+    const peerConnection = new RTCPeerConnection({
+      iceServers: iceServers.current,
+    });
     const peerConnectionType = IUserRTCPeerConnectionType.answer;
 
     bindPeerConnectionEventListener(
