@@ -82,7 +82,6 @@ export interface IUserSession {
 
 export interface IUserSessionMediaStream {
   userSessionId: string;
-  connectionId: string;
   stream: MediaStream;
 }
 

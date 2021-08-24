@@ -8,11 +8,11 @@ export const ScreenSharing = () => {
   return useMemo(() => {
     return (
       <Box style={styles.screenSharingRoot}>
-        {otherScreenSharedStream && (
+        {otherScreenSharedStream && otherScreenSharedStream.stream && (
           <video
             style={styles.video}
             ref={(video) => {
-              if (video) video.srcObject = otherScreenSharedStream;
+              if (video) video.srcObject = otherScreenSharedStream.stream;
             }}
             autoPlay
           />
