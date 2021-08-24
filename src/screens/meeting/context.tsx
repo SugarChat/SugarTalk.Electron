@@ -279,7 +279,9 @@ export const MeetingProvider: React.FC = ({ children }) => {
         setUserSessions(newUserSessions);
         selfUserSession.current = newUserSessions.find((x) => x.isSelf);
       }
-      connectToOtherUsersIfRequire(newUserSessions.filter((x) => !x.isSelf));
+      connectToOtherUsersIfRequire(
+        newUserSessions.filter((x) => !x.isSelf && x.connectionId)
+      );
     });
   };
 
@@ -317,7 +319,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
             x.peerConnectionType === IUserRTCPeerConnectionType.offer
         );
       if (!hasOfferTheStreamConnection && selfUserSession.current) {
-        console.log('hasOfferTheStreamConnection', hasOfferTheStreamConnection);
         createOfferPeerConnection(
           selfUserSession.current,
           otherUserSession,
@@ -731,9 +732,11 @@ export const MeetingProvider: React.FC = ({ children }) => {
         );
       } else if (e.track.kind === 'video') {
         if (mediaType === IUserRTCPeerConnectionMediaType.screen) {
-          setOtherScreenSharedStream({
-            userSessionId: sendToUserSession.id,
-            stream,
+          setOtherScreenSharedStream(() => {
+            return {
+              userSessionId: sendToUserSession.id,
+              stream,
+            };
           });
         } else if (mediaType === IUserRTCPeerConnectionMediaType.video) {
           setUserSessionVideos(
