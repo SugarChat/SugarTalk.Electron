@@ -3,17 +3,6 @@ export enum MeetingType {
   schedule,
 }
 
-export enum UserSessionWebRtcConnectionStatus {
-  connecting,
-  connected,
-  disconnected,
-}
-
-export enum UserSessionWebRtcConnectionType {
-  send,
-  receive,
-}
-
 export interface ScheduleMeetingCommand {
   id: string;
   meetingType: MeetingType;
@@ -34,15 +23,6 @@ export interface ShareScreenCommand {
   isShared: boolean;
 }
 
-export interface UpdateUserSessionWebRtcConnectionStatusCommand {
-  userSessionWebRtcConnectionId: string;
-  connectionStatus: UserSessionWebRtcConnectionStatus;
-}
-
-export interface RemoveUserSessionWebRtcConnectionCommand {
-  webRtcPeerConnectionId: string;
-}
-
 export interface MeetingDto {
   meetingNumber: string;
 }
@@ -58,16 +38,6 @@ export interface MeetingSession {
   userSessions: IUserSession[];
 }
 
-export interface UserSessionWebRtcConnection {
-  id: string;
-  userSessionId: string;
-  webRtcPeerConnectionId: string;
-  receiveWebRtcConnectionId?: string;
-  mediaType: MediaType;
-  connectionType: UserSessionWebRtcConnectionType;
-  connectionStatus: UserSessionWebRtcConnectionStatus;
-}
-
 export interface IUserSession {
   id: string;
   connectionId: string;
@@ -77,7 +47,6 @@ export interface IUserSession {
   isMuted: boolean;
   isSharingScreen: boolean;
   isSharingCamera: boolean;
-  webRtcConnections: UserSessionWebRtcConnection[];
 }
 
 export interface IUserSessionMediaStream {
