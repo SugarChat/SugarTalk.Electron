@@ -22,7 +22,7 @@ const MeetingScreen: React.FC = React.memo(() => {
   const renderSaringMetting = useMemo(() => {
     if (!isSomeoneElseSharingScreen) return null;
     return <ScreenSharing />;
-  }, [, isSomeoneElseSharingScreen]);
+  }, [isSomeoneElseSharingScreen]);
 
   return (
     <PageScreen style={styles.root}>
