@@ -627,7 +627,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
     // Prevent send or receive accour exception
     if (!sendFromUserSession.connectionId || !sendToUserSession.connectionId)
       return;
-    console.log(iceServers.current);
+
     const peerConnectionId = GUID();
     const peerConnection = new RTCPeerConnection({
       iceServers: iceServers.current,
