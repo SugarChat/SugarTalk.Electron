@@ -247,7 +247,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
             chromeMediaSource: 'desktop',
             chromeMediaSourceId: currentScreenId,
           },
-          optional: [{ minFrameRate: 120 }, { aspectRatio: 16 / 9 }],
+          optional: [{ minFrameRate: 15 }, { aspectRatio: 16 / 9 }],
         };
         navigator.mediaDevices
           .getUserMedia({
@@ -260,7 +260,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
               x.applyConstraints({
                 width: { min: 640, ideal: 1920, max: 1920 },
                 height: { min: 400, ideal: 1080 },
-                frameRate: { min: 120, ideal: 120, max: 120 },
+                frameRate: { min: 0, ideal: 15, max: 15 },
               });
             });
             screenStream.current = gotStream;
