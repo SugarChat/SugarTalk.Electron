@@ -3,23 +3,6 @@ export enum MeetingType {
   schedule,
 }
 
-export enum UserSessionWebRtcConnectionStatus {
-  connecting,
-  connected,
-  disconnected,
-}
-
-export enum UserSessionWebRtcConnectionType {
-  send,
-  receive,
-}
-
-export enum UserSessionWebRtcConnectionMediaType {
-  audio,
-  video,
-  screen,
-}
-
 export interface ScheduleMeetingCommand {
   id: string;
   meetingType: MeetingType;
@@ -40,15 +23,6 @@ export interface ShareScreenCommand {
   isShared: boolean;
 }
 
-export interface UpdateUserSessionWebRtcConnectionStatusCommand {
-  userSessionWebRtcConnectionId: string;
-  connectionStatus: UserSessionWebRtcConnectionStatus;
-}
-
-export interface RemoveUserSessionWebRtcConnectionCommand {
-  webRtcPeerConnectionId: string;
-}
-
 export interface MeetingDto {
   meetingNumber: string;
 }
@@ -64,16 +38,6 @@ export interface MeetingSession {
   userSessions: IUserSession[];
 }
 
-export interface UserSessionWebRtcConnection {
-  id: string;
-  userSessionId: string;
-  webRtcPeerConnectionId: string;
-  receiveWebRtcConnectionId?: string;
-  mediaType: UserSessionWebRtcConnectionMediaType;
-  connectionType: UserSessionWebRtcConnectionType;
-  connectionStatus: UserSessionWebRtcConnectionStatus;
-}
-
 export interface IUserSession {
   id: string;
   connectionId: string;
@@ -83,12 +47,10 @@ export interface IUserSession {
   isMuted: boolean;
   isSharingScreen: boolean;
   isSharingCamera: boolean;
-  webRtcConnections: UserSessionWebRtcConnection[];
 }
 
 export interface IUserSessionMediaStream {
   userSessionId: string;
-  connectionId: string;
   stream: MediaStream;
 }
 
@@ -97,10 +59,21 @@ export interface IUserSessionConnectionManager {
 }
 
 export interface IUserRTCPeerConnection {
-  isSelf: boolean;
   userSessionId: string;
   peerConnectionId: string;
   peerConnection: RTCPeerConnection;
-  receiveWebRtcConnectionId?: string;
-  mediaType: UserSessionWebRtcConnectionMediaType;
+  peerConnectionType: IUserRTCPeerConnectionType;
+  peerConnectionMediaType: IUserRTCPeerConnectionMediaType;
+  relatedPeerConnectionId?: string;
+}
+
+export enum IUserRTCPeerConnectionType {
+  offer,
+  answer,
+}
+
+export enum IUserRTCPeerConnectionMediaType {
+  audio,
+  video,
+  screen,
 }
