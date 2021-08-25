@@ -289,7 +289,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
     const getMeetingSessionRequest: GetMeetingSessionRequest = {
       meetingNumber,
     };
-    api.meeting
+    await api.meeting
       .getMeetingSession(getMeetingSessionRequest)
       .then(async (response) => {
         const connectionId = serverConnection.current?.connectionId;
@@ -301,12 +301,21 @@ export const MeetingProvider: React.FC = ({ children }) => {
         );
         if (JSON.stringify(userSessions) !== JSON.stringify(newUserSessions)) {
           setUserSessions(newUserSessions);
-          selfUserSession.current = newUserSessions.find((x) => x.isSelf);
+          updateSelfUserSessionFromNewList(newUserSessions);
         }
         await connectToOtherUsersIfRequire(
           newUserSessions.filter((x) => !x.isSelf)
         );
       });
+  };
+
+  const updateSelfUserSessionFromNewList = (
+    newUserSessions: IUserSession[]
+  ) => {
+    const newSelfUserSession = newUserSessions.find((x) => x.isSelf);
+    if (newSelfUserSession) {
+      selfUserSession.current = newSelfUserSession;
+    }
   };
 
   const connectToOtherUsersIfRequire = async (otherUsers: IUserSession[]) => {
@@ -388,6 +397,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
   };
 
   const removeMediasFromUserSession = (userSession: IUserSession) => {
+    if (!userSession) return;
     setUserSessionAudios((oldUserSessionAudios: IUserSessionMediaStream[]) =>
       oldUserSessionAudios.filter(
         (oldUserSessionAudio: IUserSessionMediaStream) =>
