@@ -1,4 +1,8 @@
-import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
+import {
+  HubConnection,
+  HubConnectionBuilder,
+  HubConnectionState,
+} from '@microsoft/signalr';
 import React from 'react';
 import queryString from 'query-string';
 import { useLocation } from 'react-router-dom';
@@ -79,6 +83,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const [otherUsersAdded, setOtherUsersAdded] = React.useState<boolean>(false);
   const [signalrConnected, setSignalrConnected] =
     React.useState<boolean>(false);
+  const [canSyncMeeting, setCanSyncMeeting] = React.useState<boolean>(false);
   const selfUserSession = React.useRef<IUserSession>();
   const [userSessions, setUserSessions] = React.useState<IUserSession[]>([]);
   const [userSessionAudios, setUserSessionAudios] = React.useState<
@@ -156,18 +161,21 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
       joinTheMeeting();
       getIceServers();
+
+      setCanSyncMeeting(true);
     }
   }, [meetingParam]);
 
   React.useEffect(() => {
     if (meetingJoined && meetingParam) {
-      connectSignalr(meetingParam.userName, meetingParam.meetingId);
+      setupSignalr(meetingParam.userName, meetingParam.meetingId);
+      connectSignrlr();
     }
   }, [meetingJoined]);
 
   React.useEffect(() => {
     if (signalrConnected) {
-      setupSignalr();
+      setupSignalrHubMethodHandlers();
     }
   }, [signalrConnected]);
 
@@ -193,10 +201,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
         });
     }
   }, [otherUsersAdded]);
-
-  useInterval(async () => {
-    await syncMeeting();
-  }, 5000);
 
   React.useEffect(() => {
     if (audioStreamInitialized) {
@@ -270,11 +274,22 @@ export const MeetingProvider: React.FC = ({ children }) => {
     }
   }, [currentScreenId]);
 
+  useInterval(
+    async () => {
+      if (isCurrentStateCanSyncMeeting()) await syncMeeting();
+    },
+    canSyncMeeting ? 5000 : null
+  );
+
+  const isCurrentStateCanSyncMeeting = (): boolean => {
+    return serverConnection.current?.state === HubConnectionState.Connected;
+  };
+
   const syncMeeting = async () => {
     const getMeetingSessionRequest: GetMeetingSessionRequest = {
       meetingNumber,
     };
-    api.meeting
+    await api.meeting
       .getMeetingSession(getMeetingSessionRequest)
       .then(async (response) => {
         const connectionId = serverConnection.current?.connectionId;
@@ -286,12 +301,21 @@ export const MeetingProvider: React.FC = ({ children }) => {
         );
         if (JSON.stringify(userSessions) !== JSON.stringify(newUserSessions)) {
           setUserSessions(newUserSessions);
-          selfUserSession.current = newUserSessions.find((x) => x.isSelf);
+          updateSelfUserSessionFromNewList(newUserSessions);
         }
         await connectToOtherUsersIfRequire(
           newUserSessions.filter((x) => !x.isSelf)
         );
       });
+  };
+
+  const updateSelfUserSessionFromNewList = (
+    newUserSessions: IUserSession[]
+  ) => {
+    const newSelfUserSession = newUserSessions.find((x) => x.isSelf);
+    if (newSelfUserSession) {
+      selfUserSession.current = newSelfUserSession;
+    }
   };
 
   const connectToOtherUsersIfRequire = async (otherUsers: IUserSession[]) => {
@@ -373,6 +397,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
   };
 
   const removeMediasFromUserSession = (userSession: IUserSession) => {
+    if (!userSession) return;
     setUserSessionAudios((oldUserSessionAudios: IUserSessionMediaStream[]) =>
       oldUserSessionAudios.filter(
         (oldUserSessionAudio: IUserSessionMediaStream) =>
@@ -398,6 +423,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
   };
 
   const updateUserSession = (userSession: IUserSession) => {
+    if (!userSession) return;
     setUserSessions((oldUserSessions: IUserSession[]) => {
       const updateUserSessions = oldUserSessions.map((oldUserSession) => {
         if (oldUserSession.id === userSession.id) {
@@ -431,6 +457,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
   };
 
   const removeUserSession = async (userSession: IUserSession) => {
+    if (!userSession) return;
     setUserSessions((oldUserSessions: IUserSession[]) =>
       oldUserSessions.filter(
         (oldUserSession: IUserSession) => oldUserSession.id !== userSession.id
@@ -448,24 +475,38 @@ export const MeetingProvider: React.FC = ({ children }) => {
     await api.meeting.changeAudio(changeAudioCommand);
   };
 
-  const connectSignalr = (userName: string, meetingId: string) => {
+  const setupSignalr = async (userName: string, meetingId: string) => {
     const wsUrl = `${Env.apiUrl}meetingHub?username=${userName}&meetingNumber=${meetingId}`;
     serverConnection.current = new HubConnectionBuilder()
       .withUrl(wsUrl, { accessTokenFactory: () => userStore.idToken })
+      .withAutomaticReconnect()
       .build();
-    serverConnection.current
-      ?.start()
-      .then(() => {
-        setSignalrConnected(true);
-      })
-      .catch((err?: any) => {
-        if (err?.statusCode === 401) {
-          electron.remote.getCurrentWindow().close();
-        }
-      });
+    serverConnection.current.onclose(() => {
+      electron.remote.getCurrentWindow().reload();
+    });
+    serverConnection.current.onreconnected(() => {
+      electron.remote.getCurrentWindow().reload();
+    });
   };
 
-  const setupSignalr = () => {
+  const connectSignrlr = async () => {
+    const startSignalrConnection = async () => {
+      try {
+        await serverConnection.current?.start();
+        setSignalrConnected(true);
+      } catch (error) {
+        if (error?.statusCode === 401) {
+          electron.remote.getCurrentWindow().close();
+        }
+        setTimeout(async () => {
+          await startSignalrConnection();
+        }, 5000);
+      }
+    };
+    await startSignalrConnection();
+  };
+
+  const setupSignalrHubMethodHandlers = () => {
     serverConnection.current?.on('SetLocalUser', (localUser: IUserSession) => {
       localUser.isSelf = true;
       setUserSessions((oldUserSessions: IUserSession[]) => [
@@ -609,13 +650,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
         await closeAndRemoveConnections(matchedPeerConnections, false);
       }
     );
-
-    serverConnection.current?.onclose((error?: Error) => {
-      if (error?.message.includes('MeetingNotFoundException')) {
-        alert('Meeting not found.');
-        electron.remote.getCurrentWindow().close();
-      }
-    });
   };
 
   const createOfferPeerConnection = async (
