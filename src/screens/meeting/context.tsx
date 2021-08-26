@@ -25,6 +25,7 @@ import {
   ShareScreenCommand,
   IUserRTCPeerConnectionType,
   IUserRTCPeerConnectionMediaType,
+  IUserSessionMediaStreamVolume,
 } from '../../dtos/schedule-meeting-command';
 import api from '../../services/api';
 import { GUID } from '../../utils/guid';
@@ -51,6 +52,7 @@ interface IMeetingContext {
   meetingNumber: string;
   userSessions: IUserSession[];
   userSessionAudios: IUserSessionMediaStream[];
+  userSessionAudioVolumes: IUserSessionMediaStreamVolume[];
   userSessionVideos: IUserSessionMediaStream[];
   otherScreenSharedStream: IUserSessionMediaStream | undefined;
 }
@@ -68,6 +70,7 @@ export const MeetingContext = React.createContext<IMeetingContext>({
   meetingNumber: '',
   userSessions: [],
   userSessionAudios: [],
+  userSessionAudioVolumes: [],
   userSessionVideos: [],
   otherScreenSharedStream: undefined,
 });
@@ -81,6 +84,8 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const [meetingJoined, setMeetingJoined] = React.useState<boolean>(false);
   const [localUserAdded, setLocalUserAdded] = React.useState<boolean>(false);
   const [otherUsersAdded, setOtherUsersAdded] = React.useState<boolean>(false);
+  const [localUserInitialized, setLocalUserInitialized] =
+    React.useState<boolean>(false);
   const [signalrConnected, setSignalrConnected] =
     React.useState<boolean>(false);
   const [canSyncMeeting, setCanSyncMeeting] = React.useState<boolean>(false);
@@ -88,6 +93,9 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const [userSessions, setUserSessions] = React.useState<IUserSession[]>([]);
   const [userSessionAudios, setUserSessionAudios] = React.useState<
     IUserSessionMediaStream[]
+  >([]);
+  const [userSessionAudioVolumes, setUserSessionAudioVolumes] = React.useState<
+    IUserSessionMediaStreamVolume[]
   >([]);
   const [userSessionVideos, setUserSessionVideos] = React.useState<
     IUserSessionMediaStream[]
@@ -182,8 +190,26 @@ export const MeetingProvider: React.FC = ({ children }) => {
   React.useEffect(() => {
     if (localUserAdded) {
       selfUserSession.current = userSessions.find((x) => x.isSelf);
+      setLocalUserInitialized(true);
     }
   }, [localUserAdded]);
+
+  React.useEffect(() => {
+    if (
+      localUserInitialized &&
+      audioStreamInitialized &&
+      selfUserSession.current
+    ) {
+      trackingAudioVolume(selfUserSession.current, audioStream.current);
+      setUserSessionAudioVolumes([
+        ...userSessionAudioVolumes,
+        {
+          userSessionId: selfUserSession.current.id,
+          volume: 0,
+        },
+      ]);
+    }
+  }, [localUserInitialized, audioStreamInitialized]);
 
   React.useEffect(() => {
     if (otherUsersAdded && audioStreamInitialized) {
@@ -454,6 +480,24 @@ export const MeetingProvider: React.FC = ({ children }) => {
           return sessionConnection;
         }
       );
+  };
+
+  const updateUserSessionAudioVolumes = (
+    userSession: IUserSession,
+    volume: number
+  ) => {
+    setUserSessionAudioVolumes((oldUserSessionAudioVolumes) => {
+      return oldUserSessionAudioVolumes.map((oldUserSessionVolume) => {
+        const matched = oldUserSessionAudioVolumes.find(
+          (x) => x.userSessionId === userSession.id
+        );
+        if (matched) {
+          matched.volume = volume;
+          return matched;
+        }
+        return oldUserSessionVolume;
+      });
+    });
   };
 
   const removeUserSession = async (userSession: IUserSession) => {
@@ -766,7 +810,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
     peer.addEventListener('track', (e: RTCTrackEvent) => {
       const stream = e.streams[0];
       if (e.track.kind === 'audio') {
-        trackingAudioVolume(stream);
+        trackingAudioVolume(sendToUserSession, stream);
         setUserSessionAudios(
           (oldUserSessionAudios: IUserSessionMediaStream[]) => {
             return [
@@ -774,6 +818,17 @@ export const MeetingProvider: React.FC = ({ children }) => {
               {
                 userSessionId: sendToUserSession.id,
                 stream,
+              },
+            ];
+          }
+        );
+        setUserSessionAudioVolumes(
+          (oldUserSessionAudioVolumes: IUserSessionMediaStreamVolume[]) => {
+            return [
+              ...oldUserSessionAudioVolumes,
+              {
+                userSessionId: sendToUserSession.id,
+                volume: 0,
               },
             ];
           }
@@ -803,14 +858,20 @@ export const MeetingProvider: React.FC = ({ children }) => {
     });
   };
 
-  const trackingAudioVolume = async (trackAudioStream: MediaStream) => {
+  const trackingAudioVolume = async (
+    userSession: IUserSession,
+    trackAudioStream: MediaStream
+  ) => {
     const audioContext = new AudioContext();
     await audioContext.audioWorklet.addModule('./utils/vumeter.js');
     const source = audioContext.createMediaStreamSource(trackAudioStream);
     const node = new AudioWorkletNode(audioContext, 'vumeter');
     node.port.onmessage = (event) => {
       if (event.data.volume) {
-        console.log(Math.round(event.data.volume * 200));
+        updateUserSessionAudioVolumes(
+          userSession,
+          Math.round(event.data.volume * 200)
+        );
       }
     };
     source.connect(node).connect(audioContext.destination);
@@ -825,6 +886,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
         meetingNumber,
         userSessions,
         userSessionAudios,
+        userSessionAudioVolumes,
         isSharingVideo,
         setIsSharingVideo,
         currentScreenId,

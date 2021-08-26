@@ -1,4 +1,6 @@
+/* eslint-disable no-underscore-dangle */
 const SMOOTHING_FACTOR = 0.8;
+// eslint-disable-next-line no-unused-vars
 const MINIMUM_VALUE = 0.00001;
 registerProcessor(
   'vumeter',
@@ -12,7 +14,7 @@ registerProcessor(
     constructor() {
       super();
       this._volume = 0;
-      this._updateIntervalInMS = 25;
+      this._updateIntervalInMS = 125;
       this._nextUpdateFrame = this._updateIntervalInMS;
       this.port.onmessage = (event) => {
         if (event.data.updateIntervalInMS) {

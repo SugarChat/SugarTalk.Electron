@@ -9,7 +9,8 @@ import { VerticalUserList } from './components/vertical-user-list';
 import { ScreenSharing } from './components/screen-sharing';
 
 const MeetingScreen: React.FC = React.memo(() => {
-  const { userSessions, userSessionAudios } = React.useContext(MeetingContext);
+  const { userSessions, userSessionAudios, userSessionAudioVolumes } =
+    React.useContext(MeetingContext);
 
   const isSomeoneElseSharingScreen = userSessions.some(
     (x) => x.isSharingScreen && !x.isSelf
@@ -23,6 +24,8 @@ const MeetingScreen: React.FC = React.memo(() => {
     if (!isSomeoneElseSharingScreen) return null;
     return <ScreenSharing />;
   }, [isSomeoneElseSharingScreen]);
+
+  console.log(userSessionAudioVolumes);
 
   return (
     <PageScreen style={styles.root}>
