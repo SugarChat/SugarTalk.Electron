@@ -430,6 +430,13 @@ export const MeetingProvider: React.FC = ({ children }) => {
           oldUserSessionAudio.userSessionId !== userSession.id
       )
     );
+    setUserSessionAudioVolumes(
+      (oldUserSessionAudioVolumes: IUserSessionMediaStreamVolume[]) =>
+        oldUserSessionAudioVolumes.filter(
+          (oldUserSessionAudioVolume: IUserSessionMediaStreamVolume) =>
+            oldUserSessionAudioVolume.userSessionId !== userSession.id
+        )
+    );
     setUserSessionVideos((oldUserSessionVideos: IUserSessionMediaStream[]) =>
       oldUserSessionVideos.filter(
         (oldUserSessionVideo: IUserSessionMediaStream) =>
@@ -492,6 +499,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
           (x) => x.userSessionId === userSession.id
         );
         if (matched) {
+          console.log(matched);
           matched.volume = volume;
           return matched;
         }
