@@ -494,17 +494,16 @@ export const MeetingProvider: React.FC = ({ children }) => {
     volume: number
   ) => {
     setUserSessionAudioVolumes((oldUserSessionAudioVolumes) => {
-      return oldUserSessionAudioVolumes.map((oldUserSessionVolume) => {
+      const updated = oldUserSessionAudioVolumes.map((oldUserSessionVolume) => {
         const matched = oldUserSessionAudioVolumes.find(
           (x) => x.userSessionId === userSession.id
         );
         if (matched) {
-          console.log(matched);
           matched.volume = volume;
-          return matched;
         }
         return oldUserSessionVolume;
       });
+      return [...updated];
     });
   };
 
