@@ -766,6 +766,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
     peer.addEventListener('track', (e: RTCTrackEvent) => {
       const stream = e.streams[0];
       if (e.track.kind === 'audio') {
+        trackingAudioVolume(stream);
         setUserSessionAudios(
           (oldUserSessionAudios: IUserSessionMediaStream[]) => {
             return [
@@ -800,6 +801,19 @@ export const MeetingProvider: React.FC = ({ children }) => {
         }
       }
     });
+  };
+
+  const trackingAudioVolume = async (trackAudioStream: MediaStream) => {
+    const audioContext = new AudioContext();
+    await audioContext.audioWorklet.addModule('./utils/vumeter.js');
+    const source = audioContext.createMediaStreamSource(trackAudioStream);
+    const node = new AudioWorkletNode(audioContext, 'vumeter');
+    node.port.onmessage = (event) => {
+      if (event.data.volume) {
+        console.log(Math.round(event.data.volume * 200));
+      }
+    };
+    source.connect(node).connect(audioContext.destination);
   };
 
   return (
