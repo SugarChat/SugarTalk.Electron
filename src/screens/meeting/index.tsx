@@ -24,33 +24,41 @@ const MeetingScreen: React.FC = React.memo(() => {
     return <ScreenSharing />;
   }, [isSomeoneElseSharingScreen]);
 
-  return (
-    <PageScreen style={styles.root}>
-      <StatusBar />
+  const userSessionAudioList = useMemo(() => {
+    return userSessionAudios?.map((userSessionAudio, key) => {
+      return (
+        <Box key={key.toString()}>
+          {userSessionAudio.stream && (
+            <audio
+              ref={(audio) => {
+                if (audio) audio.srcObject = userSessionAudio.stream;
+              }}
+              autoPlay
+            />
+          )}
+        </Box>
+      );
+    });
+  }, [userSessionAudios]);
 
-      <Box style={styles.webRTCContainer(isSharing || false)}>
-        <>
-          {renderSaringMetting}
-          <VerticalUserList isSharing={isSharing} />
-        </>
-      </Box>
-      {userSessionAudios?.map((userSessionAudio, key) => {
-        return (
-          <Box key={key.toString()}>
-            {userSessionAudio.stream && (
-              <audio
-                ref={(audio) => {
-                  if (audio) audio.srcObject = userSessionAudio.stream;
-                }}
-                autoPlay
-              />
-            )}
-          </Box>
-        );
-      })}
-      <FooterToolbar />
-    </PageScreen>
-  );
+  const content = useMemo(() => {
+    return (
+      <PageScreen style={styles.root}>
+        <StatusBar />
+
+        <Box style={styles.webRTCContainer(isSharing || false)}>
+          <>
+            {renderSaringMetting}
+
+            <VerticalUserList isSharing={isSharing} />
+          </>
+        </Box>
+        {userSessionAudioList}
+        <FooterToolbar />
+      </PageScreen>
+    );
+  }, [isSharing, isSomeoneElseSharingScreen, userSessionAudios]);
+  return content;
 });
 
 export const Meeting = () => (
