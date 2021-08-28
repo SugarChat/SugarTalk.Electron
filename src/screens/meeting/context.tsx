@@ -571,7 +571,8 @@ export const MeetingProvider: React.FC = ({ children }) => {
         sendFromUserSession: IUserSession,
         offerPeerConnectionMediaType: IUserRTCPeerConnectionMediaType,
         offerPeerConnectionId: string,
-        offerToJson: string
+        offerToJson: string,
+        candidatesToJson: string[]
       ) => {
         if (selfUserSession.current) {
           await createAnswerPeerConnection(
@@ -579,7 +580,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
             sendFromUserSession,
             offerPeerConnectionMediaType,
             offerPeerConnectionId,
-            JSON.parse(offerToJson)
+            JSON.parse(offerToJson),
+            candidatesToJson.map((candidateToJson) =>
+              JSON.parse(candidateToJson)
+            )
           );
         }
       }
@@ -591,7 +595,8 @@ export const MeetingProvider: React.FC = ({ children }) => {
         sendFromUserSession: IUserSession,
         offerPeerConnectionId: string,
         answerPeerConnectionId: string,
-        answerToJson: string
+        answerToJson: string,
+        candidatesToJson: string[]
       ) => {
         const matchedPeerConnection =
           userSessionConnectionManager.current.peerConnections.find(
@@ -603,35 +608,14 @@ export const MeetingProvider: React.FC = ({ children }) => {
           await matchedPeerConnection.peerConnection.setRemoteDescription(
             JSON.parse(answerToJson)
           );
+          candidatesToJson.forEach((candidateToJson) => {
+            matchedPeerConnection.peerConnection.addIceCandidate(
+              JSON.parse(candidateToJson)
+            );
+          });
           matchedPeerConnection.relatedPeerConnectionId =
             answerPeerConnectionId;
           updateUserSessionConnection(matchedPeerConnection);
-        }
-      }
-    );
-
-    serverConnection?.current?.on(
-      'OtherCandidateCreated',
-      async (peerConnectionId: string, candidateToJson: string) => {
-        const matchedPeerConnection =
-          userSessionConnectionManager.current.peerConnections.find(
-            (x) => x.relatedPeerConnectionId === peerConnectionId
-          );
-
-        if (matchedPeerConnection) {
-          const candidate = JSON.parse(candidateToJson);
-          if (candidate) {
-            await matchedPeerConnection.peerConnection.addIceCandidate(
-              candidate
-            );
-          }
-        } else {
-          await serverConnection?.current?.invoke(
-            'ConnectionNotFoundWhenOtherIceSent',
-            selfUserSession.current,
-            peerConnectionId,
-            candidateToJson
-          );
         }
       }
     );
@@ -662,18 +646,28 @@ export const MeetingProvider: React.FC = ({ children }) => {
     if (!sendFromUserSession.connectionId || !sendToUserSession.connectionId)
       return;
 
+    const candidates: string[] = [];
     const peerConnectionId = GUID();
     const peerConnection = new RTCPeerConnection({
       iceServers: iceServers.current,
     });
     const peerConnectionType = IUserRTCPeerConnectionType.offer;
 
-    bindPeerConnectionEventListener(
-      peerConnection,
-      peerConnectionId,
-      sendToUserSession,
-      mediaType
-    );
+    peerConnection.addEventListener('icecandidate', async (e) => {
+      if (e.candidate) {
+        candidates.push(JSON.stringify(e.candidate));
+      } else {
+        await serverConnection?.current?.invoke(
+          'ProcessOffer',
+          sendFromUserSession,
+          sendToUserSession,
+          mediaType,
+          peerConnectionId,
+          JSON.stringify(offer),
+          candidates
+        );
+      }
+    });
 
     streamToSend.getTracks().forEach((track) => {
       peerConnection.addTrack(track, streamToSend);
@@ -693,15 +687,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
       peerConnectionId,
       peerConnection,
     });
-
-    await serverConnection?.current?.invoke(
-      'ProcessOffer',
-      sendFromUserSession,
-      sendToUserSession,
-      mediaType,
-      peerConnectionId,
-      JSON.stringify(offer)
-    );
   };
 
   const createAnswerPeerConnection = async (
@@ -709,17 +694,34 @@ export const MeetingProvider: React.FC = ({ children }) => {
     sendToUserSession: IUserSession,
     offerPeerConnectionMediaType: IUserRTCPeerConnectionMediaType,
     offerPeerConnectionId: string,
-    offer: RTCSessionDescriptionInit
+    offer: RTCSessionDescriptionInit,
+    offerCandidates: RTCIceCandidateInit[] | RTCIceCandidate[]
   ) => {
+    const candidates: string[] = [];
     const peerConnectionId = GUID();
     const peerConnection = new RTCPeerConnection({
       iceServers: iceServers.current,
     });
     const peerConnectionType = IUserRTCPeerConnectionType.answer;
 
-    bindPeerConnectionEventListener(
+    peerConnection.addEventListener('icecandidate', async (e) => {
+      if (e.candidate) {
+        candidates.push(JSON.stringify(e.candidate));
+      } else {
+        await serverConnection?.current?.invoke(
+          'ProcessAnswer',
+          sendFromUserSession,
+          sendToUserSession,
+          offerPeerConnectionId,
+          peerConnectionId,
+          JSON.stringify(answer),
+          candidates
+        );
+      }
+    });
+
+    bindPeerConnectionMediaTracks(
       peerConnection,
-      peerConnectionId,
       sendToUserSession,
       offerPeerConnectionMediaType
     );
@@ -730,6 +732,10 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
     await peerConnection.setLocalDescription(answer);
 
+    offerCandidates.forEach((offerCandidate) =>
+      peerConnection.addIceCandidate(offerCandidate)
+    );
+
     userSessionConnectionManager.current.peerConnections.push({
       userSessionId: sendToUserSession.id,
       peerConnectionMediaType: offerPeerConnectionMediaType,
@@ -738,31 +744,13 @@ export const MeetingProvider: React.FC = ({ children }) => {
       peerConnection,
       relatedPeerConnectionId: offerPeerConnectionId,
     });
-
-    await serverConnection?.current?.invoke(
-      'ProcessAnswer',
-      sendFromUserSession,
-      sendToUserSession,
-      offerPeerConnectionId,
-      peerConnectionId,
-      JSON.stringify(answer)
-    );
   };
 
-  const bindPeerConnectionEventListener = (
+  const bindPeerConnectionMediaTracks = (
     peer: RTCPeerConnection,
-    peerConnectionId: string,
     sendToUserSession: IUserSession,
     mediaType: IUserRTCPeerConnectionMediaType
   ) => {
-    peer.addEventListener('icecandidate', (e) => {
-      serverConnection?.current?.invoke(
-        'ProcessCandidate',
-        sendToUserSession,
-        peerConnectionId,
-        JSON.stringify(e.candidate)
-      );
-    });
     peer.addEventListener('track', (e: RTCTrackEvent) => {
       const stream = e.streams[0];
       if (e.track.kind === 'audio') {
