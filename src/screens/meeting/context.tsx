@@ -877,7 +877,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
     const source = audioContext.createMediaStreamSource(trackAudioStream);
     const node = new AudioWorkletNode(audioContext, 'vumeter');
     node.port.onmessage = (event) => {
-      console.log(userSession.userName);
       if (event.data.volume) {
         updateUserSessionAudioVolumes(
           userSession,
