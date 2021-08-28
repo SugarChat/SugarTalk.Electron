@@ -14,6 +14,7 @@ export const root: CSSProperties = {
 export const webRTCContainer = (isSharing: boolean) => {
   if (!isSharing) {
     return {
+      position: 'relative',
       width: '100%',
       flex: '1',
       overflow: 'hidden',

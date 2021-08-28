@@ -7,43 +7,78 @@ import React, { useMemo } from 'react';
 import { MeetingContext } from '../../context';
 
 import * as styles from './styles';
+import { IUserSession } from '../../../../dtos/schedule-meeting-command';
 
 interface UserLitsProps {
   isSharing?: boolean;
 }
 
 export const VerticalUserList: React.FC<UserLitsProps> = ({ isSharing }) => {
-  const { userSessions } = React.useContext(MeetingContext);
+  const { userSessions, userSessionAudioVolumes } =
+    React.useContext(MeetingContext);
+  const isSpeaking = (userSession: IUserSession) => {
+    const oneSessionAudioVolume = userSessionAudioVolumes.find(
+      (x) => x.userSessionId === userSession.id
+    );
+    return oneSessionAudioVolume && oneSessionAudioVolume?.volume > 10;
+  };
+
+  const renderSpeakingPeople = useMemo(() => {
+    return (
+      !isSharing && (
+        <Box style={styles.speakingWrapper}>
+          <Box style={styles.speakingTitle}>正在讲话:</Box>
+          {userSessionAudioVolumes.map((x, key) => {
+            return x.volume > 10 ? (
+              <Box key={key} style={styles.namesText}>
+                {x.name};
+              </Box>
+            ) : null;
+          })}
+        </Box>
+      )
+    );
+  }, [isSharing, userSessionAudioVolumes]);
+
   return useMemo(() => {
     return (
-      <List component="div" style={styles.root(isSharing || false)}>
-        {userSessions.map((userSession, key) => {
-          return (
-            <ListItem key={key} style={styles.listItem(isSharing || false)}>
-              <Box component="div" style={styles.userContainer}>
-                <Avatar src={userSession.userPicture} style={styles.avatar} />
-                <Box
-                  component="div"
-                  style={styles.userNameContainer(isSharing || false)}
-                >
-                  {userSession.isSharingScreen && (
-                    <ScreenShareIcon fontSize="small" />
-                  )}
-                  {!userSession.isMuted ? (
-                    <MicIcon fontSize="small" style={{ color: green[500] }} />
-                  ) : (
-                    <MicOffIcon
-                      fontSize="small"
-                      style={{ color: isSharing ? '#fff' : 'gray' }}
-                    />
-                  )}
-                  <Box component="p">{userSession.userName}</Box>
+      <>
+        {renderSpeakingPeople}
+        <List component="div" style={styles.root(isSharing || false)}>
+          {userSessions.map((userSession, key) => {
+            return (
+              <ListItem
+                key={key}
+                style={styles.listItem(
+                  isSharing || false,
+                  isSpeaking(userSession) || false
+                )}
+              >
+                <Box component="div" style={styles.userContainer}>
+                  <Avatar src={userSession.userPicture} style={styles.avatar} />
+                  <Box
+                    component="div"
+                    style={styles.userNameContainer(isSharing || false)}
+                  >
+                    {userSession.isSharingScreen && (
+                      <ScreenShareIcon fontSize="small" />
+                    )}
+                    {!userSession.isMuted ? (
+                      <MicIcon fontSize="small" style={{ color: green[500] }} />
+                    ) : (
+                      <MicOffIcon
+                        fontSize="small"
+                        style={{ color: isSharing ? '#fff' : 'gray' }}
+                      />
+                    )}
+                    <Box component="p">{userSession.userName}</Box>
+                  </Box>
                 </Box>
-              </Box>
-            </ListItem>
-          );
-        })}
-      </List>
+              </ListItem>
+            );
+          })}
+        </List>
+      </>
     );
-  }, [userSessions]);
+  }, [userSessions, userSessionAudioVolumes]);
 };
