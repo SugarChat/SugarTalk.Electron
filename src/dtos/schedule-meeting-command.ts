@@ -54,6 +54,12 @@ export interface IUserSessionMediaStream {
   stream: MediaStream;
 }
 
+export interface IUserSessionMediaStreamVolume {
+  userSessionId: string;
+  volume: number;
+  name: string;
+}
+
 export interface IUserSessionConnectionManager {
   peerConnections: IUserRTCPeerConnection[];
 }

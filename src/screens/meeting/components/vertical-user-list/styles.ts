@@ -23,12 +23,13 @@ export const root = (isSharing: boolean) => {
     margin: '0px',
     paddingLeft: '10px',
     paddingRight: '10px',
+    paddingTop: '10px',
     overflow: 'auto',
     background: 'linear-gradient(to bottom right, #525559, #27292b)',
   } as CSSProperties;
 };
 
-export const listItem = (isSharing: boolean) => {
+export const listItem = (isSharing: boolean, isSpeaking: boolean) => {
   if (!isSharing) {
     return {
       width: '150px',
@@ -38,6 +39,7 @@ export const listItem = (isSharing: boolean) => {
       margin: '10px',
       borderRadius: '4px',
       padding: '0px',
+      border: isSpeaking ? '2px solid gray' : '',
     };
   }
   return {
@@ -45,9 +47,9 @@ export const listItem = (isSharing: boolean) => {
     display: 'flex',
     justifyContent: 'center',
     backgroundColor: '#2d3033',
-    marginTop: '10px',
+    marginBottom: '10px',
     borderRadius: '4px',
-    border: '2px solid #5e6166',
+    border: isSpeaking ? '2px solid #7afec6' : '2px solid #5e6166',
   };
 };
 
@@ -77,4 +79,26 @@ export const avatar: CSSProperties = {
   marginBottom: '2px',
   width: '70px',
   height: '70px',
+};
+
+export const speakingWrapper: CSSProperties = {
+  position: 'absolute',
+  top: '5px',
+  width: '300px',
+  height: '25px',
+  padding: '5px 10px',
+  display: 'flex',
+  justifyContent: 'flex-start',
+  borderRadius: '4px',
+  backgroundColor: '#d9eafe',
+  zIndex: '100',
+};
+
+export const speakingTitle: CSSProperties = {
+  width: '75px',
+};
+export const namesText: CSSProperties = {
+  flex: '1',
+  textAlign: 'left',
+  overflow: 'hidden',
 };

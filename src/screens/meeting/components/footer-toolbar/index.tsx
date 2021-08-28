@@ -1,5 +1,5 @@
 import { Box, Button, Grid, withStyles, ButtonProps } from '@material-ui/core';
-import React from 'react';
+import React, { useMemo } from 'react';
 import MicIcon from '@material-ui/icons/Mic';
 import VideocamIcon from '@material-ui/icons/Videocam';
 import ScreenShareIcon from '@material-ui/icons/ScreenShare';
@@ -111,47 +111,62 @@ export const FooterToolbar = React.memo(() => {
     }
   };
 
-  return (
-    <Box style={styles.footerToolbarContainer}>
-      <Grid container direction="row">
-        <Grid item container xs={6} justifyContent="flex-start" spacing={1}>
-          <Grid item>
-            <ToolbarButton
-              onClick={() => setIsMuted(!isMuted)}
-              text={!isMuted ? '静音' : '解除静音'}
-              icon={!isMuted ? <MicIcon /> : <MicOffIcon />}
-            />
+  const renderContext = useMemo(() => {
+    return (
+      <Box style={styles.footerToolbarContainer}>
+        <Grid container direction="row">
+          <Grid item container xs={6} justifyContent="flex-start" spacing={1}>
+            <Grid item>
+              <ToolbarButton
+                onClick={() => setIsMuted(!isMuted)}
+                text={!isMuted ? '静音' : '解除静音'}
+                icon={!isMuted ? <MicIcon /> : <MicOffIcon />}
+              />
+            </Grid>
+            <Grid item>
+              <ToolbarButton
+                onClick={onVideoClick}
+                text={isSharingVideo ? '关闭视频' : '开启视频'}
+                icon={isSharingVideo ? <VideocamIcon /> : <VideocamOffIcon />}
+              />
+            </Grid>
+            <Grid item>
+              <ToolbarButton
+                disabled={isSelectingScreen || otherUserSharingScreen}
+                onClick={onShareScreen}
+                text={!isSharingScreen ? '共享屏幕' : '停止共享屏幕'}
+                icon={
+                  isSharingScreen ? (
+                    <StopScreenShareIcon />
+                  ) : (
+                    <ScreenShareIcon />
+                  )
+                }
+              />
+            </Grid>
           </Grid>
-          <Grid item>
-            <ToolbarButton
-              onClick={onVideoClick}
-              text={isSharingVideo ? '关闭视频' : '开启视频'}
-              icon={isSharingVideo ? <VideocamIcon /> : <VideocamOffIcon />}
-            />
-          </Grid>
-          <Grid item>
-            <ToolbarButton
-              disabled={isSelectingScreen || otherUserSharingScreen}
-              onClick={onShareScreen}
-              text={!isSharingScreen ? '共享屏幕' : '停止共享屏幕'}
-              icon={
-                isSharingScreen ? <StopScreenShareIcon /> : <ScreenShareIcon />
-              }
-            />
+          <Grid item container xs={6} justifyContent="flex-end" spacing={3}>
+            <Grid item>
+              <Button
+                variant="outlined"
+                color="secondary"
+                onClick={onCloseMeeting}
+              >
+                结束会议
+              </Button>
+            </Grid>
           </Grid>
         </Grid>
-        <Grid item container xs={6} justifyContent="flex-end" spacing={3}>
-          <Grid item>
-            <Button
-              variant="outlined"
-              color="secondary"
-              onClick={onCloseMeeting}
-            >
-              结束会议
-            </Button>
-          </Grid>
-        </Grid>
-      </Grid>
-    </Box>
-  );
+      </Box>
+    );
+  }, [
+    isMuted,
+    currentScreenId,
+    isSharingVideo,
+    isSelectingScreen,
+    isSharingScreen,
+    otherUserSharingScreen,
+  ]);
+
+  return renderContext;
 });

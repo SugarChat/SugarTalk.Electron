@@ -206,6 +206,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
         {
           userSessionId: selfUserSession.current.id,
           volume: 0,
+          name: selfUserSession.current.userName,
         },
       ]);
     }
@@ -836,6 +837,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
               {
                 userSessionId: sendToUserSession.id,
                 volume: 0,
+                name: sendToUserSession.userName,
               },
             ];
           }

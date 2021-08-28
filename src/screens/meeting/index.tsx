@@ -9,8 +9,7 @@ import { VerticalUserList } from './components/vertical-user-list';
 import { ScreenSharing } from './components/screen-sharing';
 
 const MeetingScreen: React.FC = React.memo(() => {
-  const { userSessions, userSessionAudios, userSessionAudioVolumes } =
-    React.useContext(MeetingContext);
+  const { userSessions, userSessionAudios } = React.useContext(MeetingContext);
 
   const isSomeoneElseSharingScreen = userSessions.some(
     (x) => x.isSharingScreen && !x.isSelf
@@ -25,35 +24,41 @@ const MeetingScreen: React.FC = React.memo(() => {
     return <ScreenSharing />;
   }, [isSomeoneElseSharingScreen]);
 
-  console.log(userSessionAudioVolumes);
+  const userSessionAudioList = useMemo(() => {
+    return userSessionAudios?.map((userSessionAudio, key) => {
+      return (
+        <Box key={key.toString()}>
+          {userSessionAudio.stream && (
+            <audio
+              ref={(audio) => {
+                if (audio) audio.srcObject = userSessionAudio.stream;
+              }}
+              autoPlay
+            />
+          )}
+        </Box>
+      );
+    });
+  }, [userSessionAudios]);
 
-  return (
-    <PageScreen style={styles.root}>
-      <StatusBar />
+  const content = useMemo(() => {
+    return (
+      <PageScreen style={styles.root}>
+        <StatusBar />
 
-      <Box style={styles.webRTCContainer(isSharing || false)}>
-        <>
-          {renderSaringMetting}
-          <VerticalUserList isSharing={isSharing} />
-        </>
-      </Box>
-      {userSessionAudios?.map((userSessionAudio, key) => {
-        return (
-          <Box key={key.toString()}>
-            {userSessionAudio.stream && (
-              <audio
-                ref={(audio) => {
-                  if (audio) audio.srcObject = userSessionAudio.stream;
-                }}
-                autoPlay
-              />
-            )}
-          </Box>
-        );
-      })}
-      <FooterToolbar />
-    </PageScreen>
-  );
+        <Box style={styles.webRTCContainer(isSharing || false)}>
+          <>
+            {renderSaringMetting}
+
+            <VerticalUserList isSharing={isSharing} />
+          </>
+        </Box>
+        {userSessionAudioList}
+        <FooterToolbar />
+      </PageScreen>
+    );
+  }, [isSharing, isSomeoneElseSharingScreen, userSessionAudios]);
+  return content;
 });
 
 export const Meeting = () => (
