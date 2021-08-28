@@ -39,7 +39,7 @@ export const listItem = (isSharing: boolean, isSpeaking: boolean) => {
       margin: '10px',
       borderRadius: '4px',
       padding: '0px',
-      border: isSpeaking ? '2px solid gray' : '',
+      border: isSpeaking ? '2px solid #04ce6f' : '',
     };
   }
   return {
