@@ -55,6 +55,7 @@ export interface IUserSessionMediaStream {
 }
 
 export interface IUserSessionMediaStreamVolume {
+  audioContext: AudioContext;
   userSessionId: string;
   volume: number;
   name: string;
