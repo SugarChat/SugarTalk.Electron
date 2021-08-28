@@ -31,7 +31,7 @@ export const VerticalUserList: React.FC<UserLitsProps> = ({ isSharing }) => {
           {userSessionAudioVolumes.map((x, key) => {
             return x.volume > 10 ? (
               <Box key={key} style={styles.namesText}>
-                {x.name};
+                {x.userSessionName};
               </Box>
             ) : null;
           })}

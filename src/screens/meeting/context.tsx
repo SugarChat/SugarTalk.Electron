@@ -200,15 +200,20 @@ export const MeetingProvider: React.FC = ({ children }) => {
       audioStreamInitialized &&
       selfUserSession.current
     ) {
-      trackingAudioVolume(selfUserSession.current, audioStream.current);
-      setUserSessionAudioVolumes([
-        ...userSessionAudioVolumes,
-        {
-          userSessionId: selfUserSession.current.id,
-          volume: 0,
-          name: selfUserSession.current.userName,
-        },
-      ]);
+      trackingAudioVolume(selfUserSession.current, audioStream.current).then(
+        (audioContext) => {
+          if (selfUserSession.current)
+            setUserSessionAudioVolumes([
+              ...userSessionAudioVolumes,
+              {
+                audioContext,
+                userSessionId: selfUserSession.current.id,
+                userSessionName: selfUserSession.current.userName,
+                volume: 0,
+              },
+            ]);
+        }
+      );
     }
   }, [localUserInitialized, audioStreamInitialized]);
 
@@ -432,11 +437,17 @@ export const MeetingProvider: React.FC = ({ children }) => {
       )
     );
     setUserSessionAudioVolumes(
-      (oldUserSessionAudioVolumes: IUserSessionMediaStreamVolume[]) =>
-        oldUserSessionAudioVolumes.filter(
+      (oldUserSessionAudioVolumes: IUserSessionMediaStreamVolume[]) => {
+        const userSessionAudioVolume = oldUserSessionAudioVolumes.find(
+          (x) => x.userSessionId === userSession.id
+        );
+        if (userSessionAudioVolume)
+          userSessionAudioVolume.audioContext?.close();
+        return oldUserSessionAudioVolumes.filter(
           (oldUserSessionAudioVolume: IUserSessionMediaStreamVolume) =>
             oldUserSessionAudioVolume.userSessionId !== userSession.id
-        )
+        );
+      }
     );
     setUserSessionVideos((oldUserSessionVideos: IUserSessionMediaStream[]) =>
       oldUserSessionVideos.filter(
@@ -806,7 +817,6 @@ export const MeetingProvider: React.FC = ({ children }) => {
     peer.addEventListener('track', (e: RTCTrackEvent) => {
       const stream = e.streams[0];
       if (e.track.kind === 'audio') {
-        trackingAudioVolume(sendToUserSession, stream);
         setUserSessionAudios(
           (oldUserSessionAudios: IUserSessionMediaStream[]) => {
             return [
@@ -818,18 +828,21 @@ export const MeetingProvider: React.FC = ({ children }) => {
             ];
           }
         );
-        setUserSessionAudioVolumes(
-          (oldUserSessionAudioVolumes: IUserSessionMediaStreamVolume[]) => {
-            return [
-              ...oldUserSessionAudioVolumes,
-              {
-                userSessionId: sendToUserSession.id,
-                volume: 0,
-                name: sendToUserSession.userName,
-              },
-            ];
-          }
-        );
+        trackingAudioVolume(sendToUserSession, stream).then((audioContext) => {
+          setUserSessionAudioVolumes(
+            (oldUserSessionAudioVolumes: IUserSessionMediaStreamVolume[]) => {
+              return [
+                ...oldUserSessionAudioVolumes,
+                {
+                  volume: 0,
+                  audioContext,
+                  userSessionId: sendToUserSession.id,
+                  userSessionName: sendToUserSession.userName,
+                },
+              ];
+            }
+          );
+        });
       } else if (e.track.kind === 'video') {
         if (mediaType === IUserRTCPeerConnectionMediaType.screen) {
           setOtherScreenSharedStream(() => {
@@ -858,7 +871,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
   const trackingAudioVolume = async (
     userSession: IUserSession,
     trackAudioStream: MediaStream
-  ) => {
+  ): Promise<AudioContext> => {
     const audioContext = new AudioContext();
     await audioContext.audioWorklet.addModule('./utils/vumeter.js');
     const source = audioContext.createMediaStreamSource(trackAudioStream);
@@ -872,6 +885,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
       }
     };
     source.connect(node).connect(audioContext.destination);
+    return audioContext;
   };
 
   return (
