@@ -177,7 +177,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
   React.useEffect(() => {
     if (meetingJoined && meetingParam) {
-      setupSignalr(meetingParam.userName, meetingParam.meetingId);
+      setupSignalr(meetingParam.meetingId);
       connectSignrlr();
     }
   }, [meetingJoined]);
@@ -539,8 +539,8 @@ export const MeetingProvider: React.FC = ({ children }) => {
     await api.meeting.changeAudio(changeAudioCommand);
   };
 
-  const setupSignalr = async (userName: string, meetingId: string) => {
-    const wsUrl = `${Env.apiUrl}meetingHub?username=${userName}&meetingNumber=${meetingId}`;
+  const setupSignalr = async (meetingId: string) => {
+    const wsUrl = `${Env.apiUrl}meetingHub?meetingNumber=${meetingId}`;
     serverConnection.current = new HubConnectionBuilder()
       .withUrl(wsUrl, { accessTokenFactory: () => userStore.idToken })
       .withAutomaticReconnect()
