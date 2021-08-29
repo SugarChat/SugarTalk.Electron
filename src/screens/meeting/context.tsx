@@ -32,7 +32,7 @@ import { GUID } from '../../utils/guid';
 
 export interface IMeetingQueryStringParams {
   meetingId: string;
-  userName: string;
+  displayName: string;
   connectedWithAudio: boolean;
   connectedWithVideo: boolean;
 }
@@ -155,6 +155,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
       const joinTheMeeting = async () => {
         const joinMeetingCommand: JoinMeetingCommand = {
           meetingNumber: meetingParam.meetingId,
+          displayName: meetingParam.displayName,
           isMuted: !meetingParam.connectedWithAudio,
         };
         await api.meeting.joinMeeting(joinMeetingCommand).then(() => {

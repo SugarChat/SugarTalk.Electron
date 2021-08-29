@@ -11,20 +11,22 @@ import queryString from 'query-string';
 import { Header } from '../../components/header';
 import * as styles from './styles';
 import { createMeetingWindow } from '../meeting-util';
+import { useStores } from '../../contexts/root-context';
 
 export interface MeetingInfo {
   meetingId: string;
-  userName: string;
+  displayName: string;
   connectedWithAudio: boolean;
   connectedWithVideo: boolean;
 }
 
 export const JoinMeeting: React.FC = () => {
   const history = useHistory();
+  const { userStore } = useStores();
 
   const defaultMeetingInfo: MeetingInfo = {
     meetingId: '',
-    userName: '',
+    displayName: userStore.userInfo.displayName,
     connectedWithAudio: true,
     connectedWithVideo: false,
   };
@@ -53,10 +55,10 @@ export const JoinMeeting: React.FC = () => {
     setMeetingInfo(thisMeetingInfo);
   };
 
-  const onUserNameChanged = (userName: string) => {
+  const onUserNameChanged = (displayName: string) => {
     const thisMeetingInfo = {
       ...meetingInfo,
-      userName,
+      displayName,
     };
     setMeetingInfo(thisMeetingInfo);
   };
@@ -95,7 +97,7 @@ export const JoinMeeting: React.FC = () => {
             label="你的名称"
             variant="outlined"
             fullWidth
-            value={meetingInfo.userName}
+            value={meetingInfo.displayName}
             onChange={(e) => onUserNameChanged(e.target.value)}
           />
         </div>
