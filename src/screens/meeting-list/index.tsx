@@ -63,7 +63,7 @@ export const MeetingList = () => {
 
     return {
       meetingId: meetingDto.data.meetingNumber,
-      userName: userStore.userInfo.displayName,
+      displayName: userStore.userInfo.displayName,
       connectedWithAudio: true,
       connectedWithVideo: false,
     };
