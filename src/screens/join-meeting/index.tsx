@@ -6,32 +6,46 @@ import {
 } from '@material-ui/core';
 import electron from 'electron';
 import React, { useState } from 'react';
+import { SubmitHandler, useForm } from 'react-hook-form';
 import { useHistory } from 'react-router-dom';
 import queryString from 'query-string';
 import { Header } from '../../components/header';
 import * as styles from './styles';
 import { createMeetingWindow } from '../meeting-util';
+import { useStores } from '../../contexts/root-context';
 
 export interface MeetingInfo {
   meetingId: string;
-  userName: string;
+  displayName: string;
   connectedWithAudio: boolean;
   connectedWithVideo: boolean;
 }
 
+export interface IJoinMeetingForm {
+  meetingNumber: string;
+  displayName: string;
+}
+
 export const JoinMeeting: React.FC = () => {
   const history = useHistory();
+  const { userStore } = useStores();
+
+  const {
+    handleSubmit,
+    formState: { errors },
+    register,
+  } = useForm<IJoinMeetingForm>();
 
   const defaultMeetingInfo: MeetingInfo = {
     meetingId: '',
-    userName: '',
+    displayName: userStore.userInfo.displayName,
     connectedWithAudio: true,
     connectedWithVideo: false,
   };
 
   const [meetingInfo, setMeetingInfo] = useState(defaultMeetingInfo);
 
-  const onJoinClick = () => {
+  const onJoinClick: SubmitHandler<IJoinMeetingForm> = (data) => {
     const meetingInfoQuery = queryString.stringify(meetingInfo);
 
     const currentWindow = electron.remote.getCurrentWindow();
@@ -53,10 +67,10 @@ export const JoinMeeting: React.FC = () => {
     setMeetingInfo(thisMeetingInfo);
   };
 
-  const onUserNameChanged = (userName: string) => {
+  const onUserNameChanged = (displayName: string) => {
     const thisMeetingInfo = {
       ...meetingInfo,
-      userName,
+      displayName,
     };
     setMeetingInfo(thisMeetingInfo);
   };
@@ -80,13 +94,17 @@ export const JoinMeeting: React.FC = () => {
   return (
     <div style={styles.root}>
       <Header title="加入会议" />
-      <form style={styles.content} noValidate autoComplete="off">
+      <form style={styles.content} onSubmit={handleSubmit(onJoinClick)}>
         <div style={styles.contentItem}>
           <TextField
             label="会议号"
             variant="outlined"
             fullWidth
+            error={!!errors.meetingNumber}
             value={meetingInfo.meetingId}
+            {...register('meetingNumber', {
+              required: true,
+            })}
             onChange={(e) => onMeetingIdChanged(e.target.value)}
           />
         </div>
@@ -95,7 +113,11 @@ export const JoinMeeting: React.FC = () => {
             label="你的名称"
             variant="outlined"
             fullWidth
-            value={meetingInfo.userName}
+            error={!!errors.displayName}
+            value={meetingInfo.displayName}
+            {...register('displayName', {
+              required: true,
+            })}
             onChange={(e) => onUserNameChanged(e.target.value)}
           />
         </div>
@@ -130,8 +152,8 @@ export const JoinMeeting: React.FC = () => {
             style={{ width: '100%', height: '40px' }}
             variant="contained"
             color="primary"
+            type="submit"
             disableElevation
-            onClick={onJoinClick}
           >
             加入会议
           </Button>

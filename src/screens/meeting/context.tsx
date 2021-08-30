@@ -32,7 +32,7 @@ import { GUID } from '../../utils/guid';
 
 export interface IMeetingQueryStringParams {
   meetingId: string;
-  userName: string;
+  displayName: string;
   connectedWithAudio: boolean;
   connectedWithVideo: boolean;
 }
@@ -155,6 +155,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
       const joinTheMeeting = async () => {
         const joinMeetingCommand: JoinMeetingCommand = {
           meetingNumber: meetingParam.meetingId,
+          displayName: meetingParam.displayName,
           isMuted: !meetingParam.connectedWithAudio,
         };
         await api.meeting.joinMeeting(joinMeetingCommand).then(() => {
@@ -176,7 +177,7 @@ export const MeetingProvider: React.FC = ({ children }) => {
 
   React.useEffect(() => {
     if (meetingJoined && meetingParam) {
-      setupSignalr(meetingParam.userName, meetingParam.meetingId);
+      setupSignalr(meetingParam.meetingId);
       connectSignrlr();
     }
   }, [meetingJoined]);
@@ -538,8 +539,8 @@ export const MeetingProvider: React.FC = ({ children }) => {
     await api.meeting.changeAudio(changeAudioCommand);
   };
 
-  const setupSignalr = async (userName: string, meetingId: string) => {
-    const wsUrl = `${Env.apiUrl}meetingHub?username=${userName}&meetingNumber=${meetingId}`;
+  const setupSignalr = async (meetingId: string) => {
+    const wsUrl = `${Env.apiUrl}meetingHub?meetingNumber=${meetingId}`;
     serverConnection.current = new HubConnectionBuilder()
       .withUrl(wsUrl, { accessTokenFactory: () => userStore.idToken })
       .withAutomaticReconnect()

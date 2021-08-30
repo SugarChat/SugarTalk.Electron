@@ -6,8 +6,10 @@ export const createMeetingWindow = (
 ) => {
   const meetingWindow = new electron.remote.BrowserWindow({
     show: true,
-    width: 1280,
-    height: 720,
+    width: 960,
+    minWidth: 960,
+    height: 640,
+    minHeight: 640,
     movable: true,
     modal: true,
     webPreferences: {

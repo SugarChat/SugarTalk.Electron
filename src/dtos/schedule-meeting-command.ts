@@ -10,6 +10,7 @@ export interface ScheduleMeetingCommand {
 
 export interface JoinMeetingCommand {
   meetingNumber: string;
+  displayName: string;
   isMuted: boolean;
 }
 
@@ -57,8 +58,8 @@ export interface IUserSessionMediaStream {
 export interface IUserSessionMediaStreamVolume {
   audioContext: AudioContext;
   userSessionId: string;
+  userSessionName: string;
   volume: number;
-  name: string;
 }
 
 export interface IUserSessionConnectionManager {
